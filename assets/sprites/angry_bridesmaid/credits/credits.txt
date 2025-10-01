@@ -1,0 +1,147 @@
+body/bodies/female/amber.png
+	- Note: see details at https://opengameart.org/content/lpc-character-bases
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- Benjamin K. Smith (BenCreating)
+		- bluecarrot16
+		- TheraHedwig
+		- Evert
+		- MuffinElZangano
+		- Durrani
+		- Pierre Vigier (pvigier)
+		- ElizaWy
+		- Matthew Krohn (makrohn)
+		- Johannes Sjölund (wulax)
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- https://opengameart.org/content/lpc-ladies
+		- https://opengameart.org/content/lpc-7-womens-shirts
+		- https://opengameart.org/content/lpc-jump-expanded
+		- https://opengameart.org/content/lpc-be-seated
+		- https://opengameart.org/content/lpc-revised-character-basics
+		- https://gitlab.com/vagabondgame/lpc-characters
+		- https://opengameart.org/content/lpc-male-jumping-animation-by-durrani
+		- https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle
+
+head/heads/human/male/amber.png
+	- Note: original head by Redshrike, tweaks by BenCreating, modular version by bluecarrot16
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+		- Benjamin K. Smith (BenCreating)
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+		- https://opengameart.org/content/lpc-character-bases
+
+head/faces/male/anger/amber.png
+	- Note: Original by Redshrike, Expressions by ElizaWy, mapped to all frames by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- JaidynReiman
+		- ElizaWy
+		- Stephen Challener (Redshrike)
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Head
+		- https://opengameart.org/content/ulpc-expanded-expressions
+
+hair/parted_side_bangs/adult/light_brown.png
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0+
+		- CC-BY 3.0+
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+	- Links:
+		- https://opengameart.org/content/lpc-1-hairstyle-2-hair-extensions-3-previously-unofficially-released-hairstyles
+		- https://github.com/jrconway3/Universal-LPC-spritesheet/commit/46ddcf05a0e43e7aa6ffd47d350eef0eb529ac24
+
+hair/extensions/ponytails/topknot_long/adult/bg/light_brown.png
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0+
+		- CC-BY 3.0+
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+	- Links:
+		- https://opengameart.org/content/lpc-1-hairstyle-2-hair-extensions-3-previously-unofficially-released-hairstyles
+
+hair/extensions/ponytails/topknot_long/adult/fg/light_brown.png
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0+
+		- CC-BY 3.0+
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+	- Links:
+		- https://opengameart.org/content/lpc-1-hairstyle-2-hair-extensions-3-previously-unofficially-released-hairstyles
+
+facial/earrings/stud/female/gold.png
+	- Note: 
+	- Licenses:
+		- CC0
+	- Authors:
+		- bluecarrot16
+	- Links:
+		- https://opengameart.org/content/lpc-jewelry
+
+neck/necklace/female/gold.png
+	- Note: extra animations by bluecarrot16
+	- Licenses:
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- bluecarrot16
+		- Luke Mehl
+	- Links:
+		- https://opengameart.org/content/female-mage-clothing-set
+		- http://opengameart.org/content/lpc-clothing-updates
+
+dress/slit/female/pink.png
+	- Note: original **TightDress** by Nila122, by ElizaWy, extended to all animation frames and edited for v3 bases by bluecarrot16
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 2.0
+		- GPL 3.0
+	- Authors:
+		- Nila122
+		- ElizaWy
+		- bluecarrot16
+	- Links:
+		- https://opengameart.org/content/lpc-clothes-and-hair
+		- http://opengameart.org/content/lpc-clothing-updates
+
+feet/shoes/sara/thin/rose.png
+	- Note: LPC Sara by Redshrike, contributed by William Thompsonj, Shoes Separated by Bluecarrot16, Jump/Sit/Emote/Run/Revised Combat by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY 3.0+
+		- GPL 2.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- Bluecarrot16
+		- Mandi Paugh
+		- Stephen Challener (Redshrike)
+		- William.Thompsonj
+	- Links:
+		- http://opengameart.org/content/sara-wizard
+		- https://opengameart.org/content/lpc-sara
+		- https://opengameart.org/content/lpc-expanded-socks-shoes
+

@@ -1,0 +1,161 @@
+{
+  "bodyTypeName": "female",
+  "url": "https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/#?body=Body_color_amber&head=Human_male_amber&sex=female&expression=Angry_amber&hair=Long_Topknot_light_brown&dress=Slit_dress_pink&shoes=Sara_Shoes_rose&earrings=Stud_earrings_gold&necklace=Necklace_gold",
+  "spritesheets": "https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/spritesheets/",
+  "version": 1,
+  "datetime": "28/09/2025, 22:37:55",
+  "credits": [
+    {
+      "fileName": "body/bodies/female/amber.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "Benjamin K. Smith (BenCreating),bluecarrot16,TheraHedwig,Evert,MuffinElZangano,Durrani,Pierre Vigier (pvigier),ElizaWy,Matthew Krohn (makrohn),Johannes Sjölund (wulax),Stephen Challener (Redshrike)",
+      "urls": "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles,https://opengameart.org/content/lpc-medieval-fantasy-character-sprites,https://opengameart.org/content/lpc-ladies,https://opengameart.org/content/lpc-7-womens-shirts,https://opengameart.org/content/lpc-jump-expanded,https://opengameart.org/content/lpc-be-seated,https://opengameart.org/content/lpc-revised-character-basics,https://gitlab.com/vagabondgame/lpc-characters,https://opengameart.org/content/lpc-male-jumping-animation-by-durrani,https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
+      "notes": "see details at https://opengameart.org/content/lpc-character-bases"
+    },
+    {
+      "fileName": "head/heads/human/male/amber.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "bluecarrot16,Benjamin K. Smith (BenCreating),Stephen Challener (Redshrike)",
+      "urls": "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles,https://opengameart.org/content/lpc-character-bases",
+      "notes": "original head by Redshrike, tweaks by BenCreating, modular version by bluecarrot16"
+    },
+    {
+      "fileName": "head/faces/male/anger/amber.png",
+      "licenses": "OGA-BY 3.0",
+      "authors": "JaidynReiman,ElizaWy,Stephen Challener (Redshrike)",
+      "urls": "https://github.com/ElizaWy/LPC/tree/main/Characters/Head,https://opengameart.org/content/ulpc-expanded-expressions",
+      "notes": "Original by Redshrike, Expressions by ElizaWy, mapped to all frames by JaidynReiman"
+    },
+    {
+      "fileName": "hair/parted_side_bangs/adult/light_brown.png",
+      "licenses": "OGA-BY 3.0+,CC-BY 3.0+,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-1-hairstyle-2-hair-extensions-3-previously-unofficially-released-hairstyles,https://github.com/jrconway3/Universal-LPC-spritesheet/commit/46ddcf05a0e43e7aa6ffd47d350eef0eb529ac24",
+      "notes": ""
+    },
+    {
+      "fileName": "hair/extensions/ponytails/topknot_long/adult/bg/light_brown.png",
+      "licenses": "OGA-BY 3.0+,CC-BY 3.0+,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-1-hairstyle-2-hair-extensions-3-previously-unofficially-released-hairstyles",
+      "notes": ""
+    },
+    {
+      "fileName": "hair/extensions/ponytails/topknot_long/adult/fg/light_brown.png",
+      "licenses": "OGA-BY 3.0+,CC-BY 3.0+,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-1-hairstyle-2-hair-extensions-3-previously-unofficially-released-hairstyles",
+      "notes": ""
+    },
+    {
+      "fileName": "facial/earrings/stud/female/gold.png",
+      "licenses": "CC0",
+      "authors": "bluecarrot16",
+      "urls": "https://opengameart.org/content/lpc-jewelry",
+      "notes": ""
+    },
+    {
+      "fileName": "neck/necklace/female/gold.png",
+      "licenses": "CC-BY-SA 3.0,GPL 3.0",
+      "authors": "bluecarrot16,Luke Mehl",
+      "urls": "https://opengameart.org/content/female-mage-clothing-set,http://opengameart.org/content/lpc-clothing-updates",
+      "notes": "extra animations by bluecarrot16"
+    },
+    {
+      "fileName": "dress/slit/female/pink.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 2.0,GPL 3.0",
+      "authors": "Nila122,ElizaWy,bluecarrot16",
+      "urls": "https://opengameart.org/content/lpc-clothes-and-hair,http://opengameart.org/content/lpc-clothing-updates",
+      "notes": "original **TightDress** by Nila122, by ElizaWy, extended to all animation frames and edited for v3 bases by bluecarrot16"
+    },
+    {
+      "fileName": "feet/shoes/sara/thin/rose.png",
+      "licenses": "OGA-BY 3.0,CC-BY 3.0+,GPL 2.0,GPL 3.0",
+      "authors": "JaidynReiman,Bluecarrot16,Mandi Paugh,Stephen Challener (Redshrike),William.Thompsonj",
+      "urls": "http://opengameart.org/content/sara-wizard,https://opengameart.org/content/lpc-sara,https://opengameart.org/content/lpc-expanded-socks-shoes",
+      "notes": "LPC Sara by Redshrike, contributed by William Thompsonj, Shoes Separated by Bluecarrot16, Jump/Sit/Emote/Run/Revised Combat by JaidynReiman"
+    }
+  ],
+  "layers": [
+    {
+      "fileName": "hair/extensions/ponytails/topknot_long/adult/bg/light_brown.png",
+      "zPos": 9,
+      "parentName": "hair",
+      "name": "Long_Topknot",
+      "variant": "light brown",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "body/bodies/female/amber.png",
+      "zPos": 10,
+      "parentName": "body",
+      "name": "Body_color",
+      "variant": "amber",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "feet/shoes/sara/thin/rose.png",
+      "zPos": 15,
+      "parentName": "shoes",
+      "name": "Sara_Shoes",
+      "variant": "rose",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "dress/slit/female/pink.png",
+      "zPos": 30,
+      "parentName": "dress",
+      "name": "Slit_dress",
+      "variant": "pink",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "neck/necklace/female/gold.png",
+      "zPos": 80,
+      "parentName": "necklace",
+      "name": "Necklace",
+      "variant": "gold",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "head/heads/human/male/amber.png",
+      "zPos": 100,
+      "parentName": "head",
+      "name": "Human_male",
+      "variant": "amber",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "head/faces/male/anger/amber.png",
+      "zPos": 101,
+      "parentName": "expression",
+      "name": "Angry",
+      "variant": "amber",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "facial/earrings/stud/female/gold.png",
+      "zPos": 115,
+      "parentName": "earrings",
+      "name": "Stud_earrings",
+      "variant": "gold",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "hair/parted_side_bangs/adult/light_brown.png",
+      "zPos": 120,
+      "parentName": "hair",
+      "name": "Long_Topknot",
+      "variant": "light brown",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "hair/extensions/ponytails/topknot_long/adult/fg/light_brown.png",
+      "zPos": 145,
+      "parentName": "hair",
+      "name": "Long_Topknot",
+      "variant": "light brown",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    }
+  ]
+}

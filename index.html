@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Legend of the Best Men</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body { margin:0; background:#111; color:#eee; font-family: Inter, system-ui, sans-serif; }
+  #game-container { width:100vw; height:100vh; overflow:hidden; }
+  .instructions { position:absolute; left:10px; top:10px; z-index:10; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:6px; }
+</style>
+</head>
+<body>
+  <div id="game-container"></div>
+  <div class="instructions">Arrows/WASD to move. Space to interact. Click a character and press Start Game.</div>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

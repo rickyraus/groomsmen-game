@@ -1,0 +1,101 @@
+{
+  "Angry Bridesmaid": [
+    {
+      "id": "start",
+      "text": "You ATE the cake!?",
+      "choices": [
+        { "text": "Sorry… it looked delicious.", "next": "apology" },
+        { "text": "Relax, it’s just cake.", "next": "battle" },
+        { "text": "Blame the drunk uncle, not me!", "next": "blame" }
+      ]
+    },
+    {
+      "id": "apology",
+      "text": "Hmph. At least you admit it.",
+      "choices": [
+        { "text": "I’ll bake you a new one.", "reward": "wedding_veil", "next": "end" }
+      ]
+    },
+    {
+      "id": "blame",
+      "text": "Don’t drag HIM into this!",
+      "choices": [
+        { "text": "Okay fine, it was me. Sorry.", "next": "apology" },
+        { "text": "He told me to eat it!", "next": "battle" }
+      ]
+    },
+    {
+      "id": "battle",
+      "text": "That’s IT! You’re going down in heels!",
+      "battle": true,
+      "choices": []
+    },
+    {
+      "id": "end",
+      "text": "Fine… take this veil and leave me alone.",
+      "choices": []
+    }
+  ],
+
+  "Priest": [
+    {
+      "id": "start",
+      "text": "We’ve run out of wine for communion…",
+      "choices": [
+        { "text": "I’ll fetch some from the cellar.", "reward": "something_blue", "next": "end" },
+        { "text": "Just use grape juice?", "next": "battle" },
+        { "text": "Don’t worry, I spiked the punch.", "next": "suspicious" }
+      ]
+    },
+    {
+      "id": "suspicious",
+      "text": "…You WHAT?",
+      "choices": [
+        { "text": "Kidding! Totally kidding.", "next": "start" },
+        { "text": "It’s sacrilegious punch!", "next": "battle" }
+      ]
+    },
+    {
+      "id": "battle",
+      "text": "The Lord tests me… but today I test YOU!",
+      "battle": true,
+      "choices": []
+    },
+    {
+      "id": "end",
+      "text": "Bless you, child. Here’s something blue for your troubles.",
+      "choices": []
+    }
+  ],
+
+  "Drunk Uncle": [
+    {
+      "id": "start",
+      "text": "Back in *my* day we drank REAL whiskey!",
+      "choices": [
+        { "text": "Here, have a sip of this.", "reward": "wedding_band", "next": "end" },
+        { "text": "That’s nice, Uncle…", "next": "ramble" },
+        { "text": "Whiskey’s overrated, beer is better.", "next": "battle" }
+      ]
+    },
+    {
+      "id": "ramble",
+      "text": "…and THEN I wrestled a warthog. Or maybe it was a goat…",
+      "choices": [
+        { "text": "You’ve dropped something shiny…", "reward": "wedding_band", "next": "end" },
+        { "text": "Wow. Tell me again, slower?", "next": "ramble" }
+      ]
+    },
+    {
+      "id": "battle",
+      "text": "You DARE insult whiskey!? Put up your fists, nephew!",
+      "battle": true,
+      "choices": []
+    },
+    {
+      "id": "end",
+      "text": "Zzz… thanks, kid. Keep that ring safe, eh?",
+      "choices": []
+    }
+  ]
+}
