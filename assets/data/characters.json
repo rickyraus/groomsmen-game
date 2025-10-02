@@ -1,0 +1,177 @@
+[
+    {
+      "id": "travioli",
+      "displayName": "Travioli",
+      "desc": "A loyal British bulldog channelling Churchill — verbose, unflappable, and armed with confusing conversation.",
+      "color": 50751,
+      "isNPC": false,
+      "hp": 110,
+      "avatar": "assets/avatars/travioli.png",
+      "sprites": {
+        "idle": "assets/sprites/travioli/standard/idle.png",
+        "walk": "assets/sprites/travioli/standard/walk.png"
+      },
+      "battleSprites": {
+        "front": "assets/battle_sprites/front_travioli.png",
+        "back": "assets/battle_sprites/back_travioli.png"
+      },
+      "moves": [
+        { "name": "Endless Dialogue", "type": "psychic", "power": 12, "accuracy": 100, "effect": { "slowAttackPct": 20, "durationTurns": 2 } },
+        { "name": "Sup?", "type": "trick", "power": 6, "accuracy": 95, "effect": { "chanceSkip": 25 } },
+        { "name": "Stiff Upper Lip", "type": "buff", "power": 0, "accuracy": 100, "effect": { "defBoost": 20, "durationTurns": 3 } },
+        { "name": "Confusing Monologue", "type": "psychic", "power": 15, "accuracy": 75, "effect": { "chanceConfuse": 40 } }
+      ]
+    },
+    {
+      "id": "badger",
+      "displayName": "The Badger",
+      "desc": "A geologist of fearsome flatulence and unrelenting dad jokes.",
+      "color": 6504762,
+      "isNPC": false,
+      "hp": 120,
+      "avatar": "assets/avatars/badger.png",
+      "sprites": {
+        "idle": "assets/sprites/badger/standard/idle.png",
+        "walk": "assets/sprites/badger/standard/walk.png"
+      },
+      "battleSprites": {
+        "front": "assets/battle_sprites/front_badger.png",
+        "back": "assets/battle_sprites/back_badger.png"
+      },
+      "moves": [
+        { "name": "Fartquake", "type": "physical", "power": 22, "accuracy": 75, "effect": { "chanceStun": 30 } },
+        { "name": "Rock Facts", "type": "trick", "power": 8, "accuracy": 90, "effect": { "chanceConfuse": 20 } },
+        { "name": "Dad Joke", "type": "psychic", "power": 0, "accuracy": 100, "effect": { "chanceSkip": 40 } },
+        { "name": "Seismic Yawn", "type": "status", "power": 0, "accuracy": 85, "effect": { "sleep": true, "durationTurns": 2 } }
+      ]
+    },
+    {
+      "id": "enfant",
+      "displayName": "Le Enfant Terrible",
+      "desc": "A chaotic Frenchman fueled by cheese, wine, and boerewors.",
+      "color": 16744767,
+      "isNPC": false,
+      "hp": 95,
+      "avatar": "assets/avatars/enfant.png",
+      "sprites": {
+        "idle": "assets/sprites/enfant/standard/idle.png",
+        "walk": "assets/sprites/enfant/standard/walk.png"
+      },
+      "battleSprites": {
+        "front": "assets/battle_sprites/front_enfant.png",
+        "back": "assets/battle_sprites/back_enfant.png"
+      },
+      "moves": [
+        { "name": "Fromage Barrage", "type": "physical", "power": 20, "accuracy": 90, "effect": { "chanceMissNext": 20 } },
+        { "name": "Wine Spit", "type": "status", "power": 10, "accuracy": 95, "effect": { "chanceConfuse": 30 } },
+        { "name": "Surrender", "type": "story", "power": 0, "accuracy": 100, "effect": { "surrender": true } },
+        { "name": "Baguette Bash", "type": "physical", "power": 25, "accuracy": 70, "effect": { "chanceStun": 15 } }
+      ]
+    },
+    {
+      "id": "boet",
+      "displayName": "The Boet",
+      "desc": "The dependable younger brother with a heart as big as his dog collection.",
+      "color": 3840414,
+      "isNPC": false,
+      "hp": 105,
+      "avatar": "assets/avatars/boet.png",
+      "sprites": {
+        "idle": "assets/sprites/boet/standard/idle.png",
+        "walk": "assets/sprites/boet/standard/walk.png"
+      },
+      "battleSprites": {
+        "front": "assets/battle_sprites/front_boet.png",
+        "back": "assets/battle_sprites/back_boet.png"
+      },
+      "moves": [
+        { "name": "Paws of Justice", "type": "physical", "power": 15, "accuracy": 95, "effect": { "reduceDefPct": 10, "durationTurns": 2 } },
+        { "name": "Buffer Overflow", "type": "psychic", "power": 10, "accuracy": 90, "effect": { "chanceConfuse": 25 } },
+        { "name": "Braai Tongs Slam", "type": "physical", "power": 18, "accuracy": 85, "effect": { "bleed": true, "durationTurns": 2 } },
+        { "name": "Boet Booster", "type": "buff", "power": 0, "accuracy": 100, "effect": { "atkBoost": 20, "durationTurns": 2 } }
+      ]
+    },
+    {
+      "id": "angry_bridesmaid",
+      "displayName": "Angry Bridesmaid",
+      "desc": "Fueled by pink wine and unresolved issues.",
+      "color": 16711935,
+      "isNPC": true,
+      "hp": 80,
+      "avatar": "assets/avatars/angry_bridesmaid.png",
+      "sprites": {
+        "idle": "assets/sprites/angry_bridesmaid/standard/idle.png"
+      },
+      "battleSprites": {
+        "front": "assets/battle_sprites/front_angry_bridesmaid.png"
+      },
+      "moves": [
+        { "name": "Angry Slap", "type": "physical", "power": 12, "accuracy": 95 },
+        { "name": "Passive Aggression", "type": "status", "power": 0, "accuracy": 100, "effect": { "chanceConfuse": 25 } },
+        { "name": "Wine Splash", "type": "status", "power": 5, "accuracy": 90, "effect": { "chanceSkip": 20 } }
+      ]
+    },
+    {
+      "id": "priest",
+      "displayName": "Priest",
+      "desc": "A stern priest wielding scripture and divine authority.",
+      "color": 11184810,
+      "isNPC": true,
+      "hp": 100,
+      "avatar": "assets/avatars/priest.png",
+      "sprites": {
+        "idle": "assets/sprites/priest/standard/idle.png"
+      },
+      "battleSprites": {
+        "front": "assets/battle_sprites/front_priest.png"
+      },
+      "moves": [
+        { "name": "Holy Smite", "type": "physical", "power": 15, "accuracy": 90 },
+        { "name": "Divine Judgement", "type": "psychic", "power": 18, "accuracy": 85, "effect": { "chanceStun": 20 } },
+        { "name": "Sermon", "type": "buff", "power": 0, "accuracy": 100, "effect": { "defBoost": 15, "durationTurns": 2 } }
+      ]
+    },
+    {
+      "id": "drunk_uncle",
+      "displayName": "Drunk Uncle",
+      "desc": "Nearly bald, bow-tied, and unsteady with a hip flask.",
+      "color": 255,
+      "isNPC": true,
+      "hp": 95,
+      "avatar": "assets/avatars/drunk_uncle.png",
+      "sprites": {
+        "idle": "assets/sprites/drunk_uncle/standard/idle.png"
+      },
+      "battleSprites": {
+        "front": "assets/battle_sprites/front_drunk_uncle.png"
+      },
+      "moves": [
+        { "name": "Flask Swing", "type": "physical", "power": 14, "accuracy": 90 },
+        { "name": "Slurred Insult", "type": "trick", "power": 8, "accuracy": 95, "effect": { "chanceConfuse": 20 } },
+        { "name": "Tipsy Stumble", "type": "status", "power": 0, "accuracy": 100, "effect": { "chanceSkip": 15 } }
+      ]
+    },
+    {
+      "id": "bridezilla",
+      "displayName": "Bridezilla",
+      "desc": "The ultimate boss — terrifying, unstoppable, and ready to ruin the big day.",
+      "color": 16711680,
+      "hp": 200,
+      "isNPC": true,
+      "avatar": "assets/avatars/bridezilla.png",
+      "sprites": {
+        "idle": "assets/sprites/bridezilla/standard/idle.png",
+        "walk": "assets/sprites/bridezilla/standard/walk.png"
+      },
+      "battleSprites": {
+        "front": "assets/battle_sprites/front_bridezilla.png"
+      },
+      "moves": [
+        { "name": "Veil Whip", "type": "physical", "power": 25, "accuracy": 85, "effect": { "chanceStun": 20 } },
+        { "name": "Screech of Doom", "type": "psychic", "power": 20, "accuracy": 90, "effect": { "chanceConfuse": 30 } },
+        { "name": "Cold Feet", "type": "status", "power": 0, "accuracy": 100, "effect": { "atkDebuff": 20, "durationTurns": 2 } },
+        { "name": "Wedding Tantrum", "type": "ultimate", "power": 40, "accuracy": 70, "effect": { "chanceSkip": 50 } }
+      ]
+    }
+  ]
+  

@@ -10,58 +10,7 @@ const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 const BASE_SPEED = 36;
 const SCALE = 4; // try 2, 3, or 4 to taste
-
-// Character definitions
-const CHARACTERS = [
-    {
-        id: 'travioli',
-        displayName: 'Travioli',
-        desc: 'A loyal British bulldog channelling Churchill — verbose, unflappable, and armed with confusing conversation.',
-        color: 0x4d4dff,
-        avatar: 'avatars/travioli.png',
-        hp: 100,
-        moves: [
-            { name: 'Endless Dialogue', type: 'psychic', power: 10, effect: { slowAttackPct: 20 } },
-            { name: 'Sup?', type: 'trick', power: 5, effect: { chanceSkip: 30 } }
-        ]
-    },
-    {
-        id: 'badger',
-        displayName: 'The Badger',
-        desc: 'A geologist of fearsome flatulence and unrelenting dad jokes.',
-        color: 0x9e6b3a,
-        avatar: 'avatars/badger.png',
-        hp: 110,
-        moves: [
-            { name: 'Fartquake', type: 'physical', power: 20, effect: { chanceStun: 30 } },
-            { name: 'Rock Facts', type: 'physical', power: 10, effect: { chanceConfuse: 15 } }
-        ]
-    },
-    {
-        id: 'enfant',
-        displayName: 'Le Enfant Terrible',
-        desc: 'A chaotic Frenchman fueled by cheese, wine, and boerewors.',
-        avatar: 'avatars/enfant.png',
-        color: 0xff7fbf,
-        hp: 95,
-        moves: [
-            { name: 'Fromage Barrage', type: 'physical', power: 20, effect: { chanceMissNext: 25 } },
-            { name: 'Surrender', type: 'story', power: 0, effect: { surrender: true } }
-        ]
-    },
-    {
-        id: 'boet',
-        displayName: 'The Boet',
-        desc: 'The dependable younger brother with a heart as big as his dog collection.',
-        color: 0x3aff9e,
-        avatar: 'avatars/boet.png',
-        hp: 105,
-        moves: [
-            { name: 'Paws of Justice', type: 'physical', power: 15, effect: { reduceDefPct: 10, durationTurns: 2 } },
-            { name: 'Buffer Overflow', type: 'psychic', power: 10, effect: { chanceConfuse: 25 } }
-        ]
-    }
-];
+const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 class AudioManager {
     constructor(game) {
@@ -121,20 +70,25 @@ class MuteButton {
     }
 }
 
-// --- LoadingScene ---
 class LoadingScene extends Phaser.Scene {
     constructor() { super('LoadingScene'); }
 
     preload() {
         const { width, height } = this.scale;
 
+        // --- Progress bar ---
         const progressBox = this.add.graphics();
         const progressBar = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);
         progressBox.fillRect(width / 2 - 160, height / 2 - 25, 320, 50);
 
-        const loadingText = this.add.text(width / 2, height / 2 - 50, 'Loading...', { font: '20px monospace', fill: '#ffffff' }).setOrigin(0.5);
-        const percentText = this.add.text(width / 2, height / 2, '0%', { font: '18px monospace', fill: '#ffffff' }).setOrigin(0.5);
+        const loadingText = this.add.text(width / 2, height / 2 - 50, 'Loading...', {
+            fontFamily: 'monospace', fontSize: '20px', fill: '#ffffff'
+        }).setOrigin(0.5);
+
+        const percentText = this.add.text(width / 2, height / 2, '0%', {
+            fontFamily: 'monospace', fontSize: '18px', fill: '#ffffff'
+        }).setOrigin(0.5);
 
         this.load.on('progress', (value) => {
             progressBar.clear();
@@ -143,139 +97,139 @@ class LoadingScene extends Phaser.Scene {
             percentText.setText(parseInt(value * 100) + '%');
         });
 
-        this.load.on('complete', () => {
+        this.load.once('complete', () => {
             progressBar.destroy();
             progressBox.destroy();
-            loadingText.setText('Ready!');
-            percentText.destroy();
-            this.time.delayedCall(500, () => this.scene.start('BootScene'));
+            percentText.setText('100%');
         });
 
-        // Assets
+        // --- Core game assets ---
         this.load.image('overworld_tiles', 'assets/tilesets/Overworld.png');
+        this.load.image('battle_bg_grass', 'assets/backgrounds/battle_grass.png');
         this.load.tilemapTiledJSON('map', 'assets/tilemaps/overworld.json');
         this.load.json('npcDialogues', 'assets/data/npcDialogues.json');
+        this.load.json('characters', 'assets/data/characters.json');
 
         this.load.audio('overworld_theme', 'assets/audio/overworld_theme.ogg');
         this.load.audio('battle_theme', 'assets/audio/battle_theme.ogg');
         this.load.audio('menu_theme', 'assets/audio/menu_theme.ogg');
 
-        CHARACTERS.forEach(ch => {
-            this.load.image('avatar_' + ch.id, 'assets/' + ch.avatar);
-            // Idle sheet (usually 4 frames: down, left, right, up)
-            // Idle (2 frames × 4 directions)
-            this.load.spritesheet(ch.id + '_idle', `assets/sprites/${ch.id}/standard/idle.png`, {
-                frameWidth: 64,
-                frameHeight: 64
-            });
-            // Walk (8 frames × 4 directions)
-            this.load.spritesheet(ch.id + '_walk', `assets/sprites/${ch.id}/standard/walk.png`, {
-                frameWidth: 64,
-                frameHeight: 64
-            });
-            this.load.image('battle_back_' + ch.id, 'assets/battle_sprites/back_' + ch.id + '.png');
-            this.load.image('battle_front_' + ch.id, 'assets/battle_sprites/front_' + ch.id + '.png');
-        });
-
-        // NPC idle-only spritesheets (2 frames × 4 directions, 64x64)
-        ['angry_bridesmaid', 'priest', 'drunk_uncle'].forEach(npcId => {
-            this.load.spritesheet(npcId + '_idle', `assets/sprites/${npcId}/standard/idle.png`, {
-                frameWidth: 64,
-                frameHeight: 64
-            });
-        });
-
         this.load.spritesheet('quest_items', 'assets/sprites/items.png', {
-            frameWidth: 341,
-            frameHeight: 1024
+            frameWidth: 341, frameHeight: 1024
         });
-        console.log("quest_items frames:", this.textures.get('quest_items').frameTotal);
 
+        WebFont.load({ google: { families: ['Pixelify Sans', 'VT323'] } });
+    }
+
+    create() {
+        const chars = this.cache.json.get('characters');
+
+        // ✅ Only load avatars for non-NPCs
+        chars.forEach(ch => {
+            if (!ch.isNPC && ch.avatar) {
+                this.load.image('avatar_' + ch.id, ch.avatar);
+            }
+
+            // NPCs + PCs both get idle/walk sprites if defined
+            if (ch.sprites?.idle) {
+                this.load.spritesheet(ch.id + '_idle', ch.sprites.idle,
+                    { frameWidth: 64, frameHeight: 64 });
+            }
+            if (ch.sprites?.walk) {
+                this.load.spritesheet(ch.id + '_walk', ch.sprites.walk,
+                    { frameWidth: 64, frameHeight: 64 });
+            }
+
+            if (ch.battleSprites?.back) {
+                this.load.image('battle_back_' + ch.id, ch.battleSprites.back);
+            }
+            if (ch.battleSprites?.front) {
+                this.load.image('battle_front_' + ch.id, ch.battleSprites.front);
+            }
+        });
+
+        this.load.once('complete', () => {
+            this.scene.start('BootScene');
+        });
+
+        this.load.start();
     }
 }
 
 // --- BootScene ---
 class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
+
     create() {
         this.game.audioManager = new AudioManager(this.game);
 
-        // Placeholder textures
-        CHARACTERS.forEach(ch => {
+        this.characters = this.cache.json.get('characters');
+        this.game.characters = this.characters;
+
+        // --- Placeholder textures for all characters
+        this.characters.forEach(ch => {
             const g = this.add.graphics();
-            g.fillStyle(ch.color, 1);
+            g.fillStyle(ch.color || 0xffffff, 1);
             g.fillRoundedRect(0, 0, 48, 48, 6);
             g.lineStyle(2, 0x000000, 1);
             g.strokeRoundedRect(0, 0, 48, 48, 6);
             g.generateTexture('char_' + ch.id, 48, 48);
             g.destroy();
         });
+
         const g2 = this.add.graphics();
         g2.fillStyle(0xffff00, 1);
         g2.fillCircle(16, 16, 16);
         g2.generateTexture('npc_circle', 32, 32);
         g2.destroy();
 
-        // Animations
-        CHARACTERS.forEach(ch => {
-            // Idle breathing (unchanged, 2 frames each)
-            this.anims.create({
-                key: ch.id + '_idle_up',
-                frames: this.anims.generateFrameNumbers(ch.id + '_idle', { start: 0, end: 1 }),
-                frameRate: 2,
-                repeat: -1
-            });
-            this.anims.create({
-                key: ch.id + '_idle_left',
-                frames: this.anims.generateFrameNumbers(ch.id + '_idle', { start: 2, end: 3 }),
-                frameRate: 2,
-                repeat: -1
-            });
-            this.anims.create({
-                key: ch.id + '_idle_down',
-                frames: this.anims.generateFrameNumbers(ch.id + '_idle', { start: 4, end: 5 }),
-                frameRate: 2,
-                repeat: -1
-            });
-            this.anims.create({
-                key: ch.id + '_idle_right',
-                frames: this.anims.generateFrameNumbers(ch.id + '_idle', { start: 6, end: 7 }),
-                frameRate: 2,
-                repeat: -1
-            });
+        // --- Animations ---
+        this.characters.forEach(ch => {
+            if (ch.sprites?.idle) {
+                this.anims.create({
+                    key: ch.id + '_idle_up',
+                    frames: this.anims.generateFrameNumbers(ch.id + '_idle', { start: 0, end: 1 }),
+                    frameRate: 2, repeat: -1
+                });
+                this.anims.create({
+                    key: ch.id + '_idle_left',
+                    frames: this.anims.generateFrameNumbers(ch.id + '_idle', { start: 2, end: 3 }),
+                    frameRate: 2, repeat: -1
+                });
+                this.anims.create({
+                    key: ch.id + '_idle_down',
+                    frames: this.anims.generateFrameNumbers(ch.id + '_idle', { start: 4, end: 5 }),
+                    frameRate: 2, repeat: -1
+                });
+                this.anims.create({
+                    key: ch.id + '_idle_right',
+                    frames: this.anims.generateFrameNumbers(ch.id + '_idle', { start: 6, end: 7 }),
+                    frameRate: 2, repeat: -1
+                });
+            }
 
-            // Walk cycles (9 frames each)
-            this.anims.create({
-                key: ch.id + '_walk_up',
-                frames: this.anims.generateFrameNumbers(ch.id + '_walk', { start: 0, end: 8 }),
-                frameRate: 10,
-                repeat: -1
-            });
-            this.anims.create({
-                key: ch.id + '_walk_left',
-                frames: this.anims.generateFrameNumbers(ch.id + '_walk', { start: 9, end: 17 }),
-                frameRate: 10,
-                repeat: -1
-            });
-            this.anims.create({
-                key: ch.id + '_walk_down',
-                frames: this.anims.generateFrameNumbers(ch.id + '_walk', { start: 18, end: 26 }),
-                frameRate: 10,
-                repeat: -1
-            });
-            this.anims.create({
-                key: ch.id + '_walk_right',
-                frames: this.anims.generateFrameNumbers(ch.id + '_walk', { start: 27, end: 35 }),
-                frameRate: 10,
-                repeat: -1
-            });
-        });
-
-        ['angry_bridesmaid', 'priest', 'drunk_uncle'].forEach(npcId => {
-            this.anims.create({ key: npcId + '_idle_up', frames: this.anims.generateFrameNumbers(npcId + '_idle', { start: 0, end: 1 }), frameRate: 2, repeat: -1 });
-            this.anims.create({ key: npcId + '_idle_left', frames: this.anims.generateFrameNumbers(npcId + '_idle', { start: 2, end: 3 }), frameRate: 2, repeat: -1 });
-            this.anims.create({ key: npcId + '_idle_down', frames: this.anims.generateFrameNumbers(npcId + '_idle', { start: 4, end: 5 }), frameRate: 2, repeat: -1 });
-            this.anims.create({ key: npcId + '_idle_right', frames: this.anims.generateFrameNumbers(npcId + '_idle', { start: 6, end: 7 }), frameRate: 2, repeat: -1 });
+            if (ch.sprites?.walk) {
+                this.anims.create({
+                    key: ch.id + '_walk_up',
+                    frames: this.anims.generateFrameNumbers(ch.id + '_walk', { start: 0, end: 8 }),
+                    frameRate: 10, repeat: -1
+                });
+                this.anims.create({
+                    key: ch.id + '_walk_left',
+                    frames: this.anims.generateFrameNumbers(ch.id + '_walk', { start: 9, end: 17 }),
+                    frameRate: 10, repeat: -1
+                });
+                this.anims.create({
+                    key: ch.id + '_walk_down',
+                    frames: this.anims.generateFrameNumbers(ch.id + '_walk', { start: 18, end: 26 }),
+                    frameRate: 10, repeat: -1
+                });
+                this.anims.create({
+                    key: ch.id + '_walk_right',
+                    frames: this.anims.generateFrameNumbers(ch.id + '_walk', { start: 27, end: 35 }),
+                    frameRate: 10, repeat: -1
+                });
+            }
         });
 
         this.scene.start('TitleScene');
@@ -289,158 +243,275 @@ class TitleScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
 
+        // --- Background ---
         this.add.rectangle(0, 0, width, height, 0x111111).setOrigin(0);
 
-        this.add.text(width / 2, height / 2 - 40, 'LEGEND OF THE BEST MEN', {
-            font: '28px monospace',
-            fill: '#FFD700'
+        // --- Game Title ---
+        this.add.text(width / 2, height / 2 - 80, 'LEGEND OF THE BEST MEN', {
+            fontFamily: '"Pixelify Sans"',   // ✅ retro font
+            fontSize: '42px',
+            fill: '#FFD700',
+            stroke: '#000000',
+            strokeThickness: 8
         }).setOrigin(0.5);
 
+        // --- Press SPACE Prompt ---
         const prompt = this.add.text(width / 2, height / 2 + 40, 'Press SPACE to Start', {
-            font: '18px monospace',
+            fontFamily: '"VT323"',
+            fontSize: '22px',
             fill: '#FFFFFF'
         }).setOrigin(0.5);
 
-        this.tweens.add({ targets: prompt, alpha: { from: 1, to: 0.3 }, duration: 800, yoyo: true, repeat: -1 });
-
-        this.input.keyboard.once('keydown-SPACE', async () => {
-            try {
-                if (this.sound.context.state === 'suspended') {
-                    await this.sound.context.resume();
-                    console.log("🔊 AudioContext resumed manually");
-                }
-            } catch (e) {
-                console.warn("Audio resume failed:", e);
-            }
-            this.input.once('pointerdown', () => {
-                if (this.sound.context.state === 'suspended') {
-                    this.sound.context.resume().then(() => {
-                        console.log("🔊 AudioContext resumed manually");
-                    });
-                }
-            });
-            this.game.audioManager.playMusic('menu_theme', { volume: 1, fadeTime: 0 });
-            this.scene.start('CharacterSelectScene');
+        // Blinking tween
+        this.tweens.add({
+            targets: prompt,
+            alpha: { from: 1, to: 0.2 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1
         });
 
+        // --- Starfield Background ---
+        this.stars = this.add.group();
+        for (let i = 0; i < 150; i++) {
+            const x = Phaser.Math.Between(0, width);
+            const y = Phaser.Math.Between(0, height);
+            const star = this.add.rectangle(x, y, 2, 2, 0xffffff);
+            star.alpha = Phaser.Math.FloatBetween(0.3, 1);
+            this.stars.add(star);
+        }
+
+        // --- Input: SPACE to Continue ---
+        this.input.keyboard.once('keydown-SPACE', async () => {
+            try {
+                // Fix Chrome autoplay policy
+                if (this.sound.context.state === 'suspended') {
+                    await this.sound.context.resume();
+                }
+            } catch (e) {
+                console.warn("⚠️ Audio resume failed:", e);
+            }
+
+            // Play menu theme + transition
+            this.game.audioManager.playMusic('menu_theme', { volume: 1 });
+            this.scene.start('CharacterSelectScene');
+        });
+    }
+
+    update() {
+        // --- Scroll starfield ---
+        this.stars.children.iterate(star => {
+            star.y += 0.5;
+            if (star.y > GAME_HEIGHT) {
+                star.y = 0;
+                star.x = Phaser.Math.Between(0, GAME_WIDTH);
+            }
+        });
     }
 }
 
 // --- CharacterSelectScene ---
 class CharacterSelectScene extends Phaser.Scene {
-    constructor() { super('CharacterSelectScene'); }
+    constructor() {
+        super('CharacterSelectScene');
+    }
 
     create() {
-        // Background panel
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 80, GAME_HEIGHT - 100, 0x000000, 0.6)
-            .setStrokeStyle(4, 0xffffff);
+        const W = GAME_WIDTH, H = GAME_HEIGHT;
 
-        // Title (moved lower so it stays inside frame)
-        this.add.text(GAME_WIDTH / 2, 70, 'LEGEND OF THE BEST MEN', {
-            font: '30px monospace',
-            fill: '#FFD700'
+        // ✅ Only allow *playable* characters (non-NPCs) for selection
+        const CHARACTERS = this.game.characters.filter(ch => !ch.isNPC);
+
+        // ================= BACKGROUND =================
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+
+        // tiny dot texture (used for fireflies)
+        g.fillStyle(0x224422, 1);
+        g.fillCircle(2, 2, 2);
+        g.generateTexture('spark', 4, 4);
+
+        // subtle speckle noise tile
+        const TILE = 64;
+        g.clear();
+        g.fillStyle(0x173017, 1);
+        g.fillRect(0, 0, TILE, TILE);
+        for (let i = 0; i < 40; i++) {
+            g.fillStyle(0x183118, Phaser.Math.FloatBetween(0.2, 0.6));
+            g.fillRect(Phaser.Math.Between(0, TILE), Phaser.Math.Between(0, TILE), 1, 1);
+        }
+        g.generateTexture('speckle64', TILE, TILE);
+
+        // scanline overlay
+        g.clear();
+        g.fillStyle(0x000000, 0.18);
+        g.fillRect(0, 1, TILE, 1);
+        g.generateTexture('scanline', TILE, 2);
+
+        this.bgFar = this.add.tileSprite(0, 0, W, H, 'speckle64')
+            .setOrigin(0).setAlpha(0.85);
+        this.bgNear = this.add.tileSprite(0, 0, W, H, 'speckle64')
+            .setOrigin(0).setAlpha(0.95);
+
+        // fireflies
+        this.add.particles(0, 0, 'spark', {
+            x: { min: 0, max: W },
+            y: { min: 0, max: H },
+            speedY: { min: -12, max: -22 },
+            speedX: { min: -6, max: 6 },
+            lifespan: { min: 4000, max: 8000 },
+            quantity: 1,
+            scale: { start: 1, end: 0.2 },
+            alpha: { start: 0.5, end: 0 },
+            blendMode: 'ADD'
+        });
+
+        this.add.tileSprite(0, 0, W, H, 'scanline')
+            .setOrigin(0).setAlpha(0.08);
+
+        // ================= TITLE =================
+        this.add.text(W / 2, 60, 'LEGEND OF THE BEST MEN', {
+            fontFamily: '"Pixelify Sans"',
+            fontSize: '32px',
+            fill: '#FFD700',
+            stroke: '#000',
+            strokeThickness: 6
         }).setOrigin(0.5);
 
-        this.add.text(GAME_WIDTH / 2, 110, 'Choose your Champion', {
-            font: '18px monospace',
+        this.add.text(W / 2, 100, 'Choose your Champion', {
+            fontFamily: '"VT323"',
+            fontSize: '20px',
             fill: '#ffffff'
         }).setOrigin(0.5);
 
+        // ================= CHARACTER CARDS =================
         this.selected = 0;
         this.cards = [];
 
-        // Layout
+        // reusable glow
+        g.clear();
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(64, 64, 64);
+        g.generateTexture('softGlow', 128, 128);
+
         const spacingX = 180;
-        const baseX = GAME_WIDTH / 2 - (CHARACTERS.length - 1) * spacingX / 2;
-        const y = 280;
+        const baseX = W / 2 - (CHARACTERS.length - 1) * spacingX / 2;
+        const y = 285;
 
         CHARACTERS.forEach((ch, idx) => {
             const x = baseX + idx * spacingX;
 
-            // Card background
-            const cardBg = this.add.rectangle(0, 0, 120, 160, 0x222222, 0.7)
-                .setStrokeStyle(2, 0xffffff);
+            const cardBg = this.add.rectangle(0, 0, 120, 160, 0x1f1f1f, 0.9)
+                .setStrokeStyle(2, 0x777777);
 
-            // Portrait image
-            const portrait = this.add.image(0, 0, 'avatar_' + ch.id);
+            const glow = this.add.image(0, 0, 'softGlow')
+                .setScale(0.7).setTint(ch.color).setAlpha(0);
 
-            // 🔑 Ensure portrait fills box (even if some gets cropped)
-            const maxW = 100, maxH = 100;
-            const tex = this.textures.get('avatar_' + ch.id).getSourceImage();
-            const scale = Math.max(maxW / tex.width, maxH / tex.height);
-            portrait.setScale(scale);
+            // ✅ Avatar (defensive: if missing, fallback to placeholder)
+            let portrait;
+            if (this.textures.exists('avatar_' + ch.id)) {
+                portrait = this.add.image(0, -10, 'avatar_' + ch.id);
+                const maxW = 90, maxH = 90;
+                const tex = this.textures.get('avatar_' + ch.id).getSourceImage();
+                const scale = Math.min(maxW / tex.width, maxH / tex.height);
+                portrait.setScale(scale);
+            } else {
+                portrait = this.add.rectangle(0, -10, 80, 80, ch.color || 0x999999);
+            }
 
-            // Container groups elements
-            const container = this.add.container(x, y, [cardBg, portrait]);
+            const nameText = this.add.text(0, 66, ch.displayName, {
+                fontFamily: '"VT323"',
+                fontSize: '16px',
+                color: '#FFD700'
+            }).setOrigin(0.5);
+
+            const colorFrame = this.add.rectangle(0, 0, 124, 164)
+                .setStrokeStyle(3, ch.color).setAlpha(0);
+
+            const container = this.add.container(x, y, [glow, cardBg, portrait, nameText, colorFrame]);
             container.setSize(120, 160);
-            container.setInteractive({ cursor: 'pointer' });
+            container.setInteractive({ useHandCursor: true });
 
-            // Hover effect (zoom + colored frame)
+            // hover / select behaviour
             container.on('pointerover', () => {
-                this.tweens.add({
-                    targets: portrait,
-                    scale: scale * 1.1,
-                    duration: 200,
-                    ease: 'Sine.easeOut'
-                });
+                this.tweens.add({ targets: container, scale: 1.06, duration: 120 });
+                this.tweens.add({ targets: glow, alpha: 0.25, duration: 120 });
                 cardBg.setStrokeStyle(3, ch.color);
             });
-
             container.on('pointerout', () => {
-                this.tweens.add({
-                    targets: portrait,
-                    scale: scale,
-                    duration: 200,
-                    ease: 'Sine.easeIn'
-                });
-                cardBg.setStrokeStyle(2, 0xffffff);
+                this.tweens.add({ targets: container, scale: 1.0, duration: 120 });
+                if (this.selected !== idx)
+                    this.tweens.add({ targets: glow, alpha: 0, duration: 120 });
+                cardBg.setStrokeStyle(2, 0x777777);
             });
+            container.on('pointerdown', () => this.select(idx, CHARACTERS));
 
-            container.on('pointerdown', () => { this.select(idx); });
+            this.cards.push({ container, glow, colorFrame, cardBg, ch });
 
-            this.cards.push(container);
+            // entrance animation
+            container.alpha = 0; container.y = y + 10;
+            this.tweens.add({
+                targets: container,
+                alpha: 1, y,
+                duration: 500,
+                delay: idx * 120,
+                ease: 'Sine.easeOut'
+            });
         });
 
-        // Info box
-        this.infoBox = this.add.text(GAME_WIDTH / 2, 460, CHARACTERS[0].desc, {
-            font: '14px monospace',
-            fill: '#ffffff',
-            wordWrap: { width: GAME_WIDTH - 120 }
+        // ================= INFO BOX =================
+        this.add.rectangle(W / 2, 460, W - 120, 90, 0x000000, 0.45)
+            .setStrokeStyle(2, 0x888888);
+
+        this.infoBox = this.add.text(W / 2, 460, CHARACTERS[0].desc || 'No description', {
+            fontFamily: '"VT323"',
+            fontSize: '16px',
+            color: '#ffffff',
+            wordWrap: { width: W - 140 },
+            align: 'center'
         }).setOrigin(0.5);
 
-        // Start button
-        this.startBtn = this.add.text(GAME_WIDTH / 2, 520, '▶ Start Game', {
-            font: '20px monospace',
-            fill: '#000',
+        // ================= START BUTTON =================
+        this.startBtn = this.add.text(W / 2, 525, '▶ Start Game', {
+            fontFamily: '"Pixelify Sans"',
+            fontSize: '20px',
+            color: '#000000',
             backgroundColor: '#FFD700',
-            padding: { x: 14, y: 6 }
-        }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+            padding: { left: 14, right: 14, top: 6, bottom: 6 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        this.startBtn.on('pointerover', () => this.startBtn.setStyle({ backgroundColor: '#FFA500' }));
-        this.startBtn.on('pointerout', () => this.startBtn.setStyle({ backgroundColor: '#FFD700' }));
-
+        this.startBtn.on('pointerover', () =>
+            this.startBtn.setStyle({ backgroundColor: '#FFA500' }));
+        this.startBtn.on('pointerout', () =>
+            this.startBtn.setStyle({ backgroundColor: '#FFD700' }));
         this.startBtn.on('pointerdown', () => {
             const chosen = CHARACTERS[this.selected];
             this.scene.start('OverworldScene', { player: chosen });
         });
+
+        // ================= MUTE BTN =================
         this.muteBtn = new MuteButton(this);
-        this.select(0);
+
+        // init selection
+        this.select(0, CHARACTERS);
     }
 
-    select(idx) {
+    select(idx, CHARACTERS) {
         this.selected = idx;
-        if (this.highlight) this.highlight.destroy();
 
-        const container = this.cards[idx];
-
-        // Unique color frame for each selection
-        this.highlight = this.add.rectangle(0, 0, 124, 164)
-            .setStrokeStyle(4, CHARACTERS[idx].color)
-            .setOrigin(0.5);
-        container.add(this.highlight);
+        this.cards.forEach((c, i) => {
+            const isSel = i === idx;
+            this.tweens.add({ targets: c.colorFrame, alpha: isSel ? 1 : 0, duration: 120 });
+            this.tweens.add({ targets: c.glow, alpha: isSel ? 0.35 : 0, duration: 120 });
+            c.cardBg.setStrokeStyle(isSel ? 3 : 2, isSel ? c.ch.color : 0x777777);
+        });
 
         this.children.bringToTop(this.startBtn);
-        this.infoBox.setText(CHARACTERS[idx].desc);
+        this.infoBox.setText(CHARACTERS[idx].desc || 'No description available');
+    }
+
+    update() {
+        this.bgFar.tilePositionY += 0.06;
+        this.bgNear.tilePositionY += 0.12;
     }
 }
 
@@ -451,17 +522,19 @@ class OverworldScene extends Phaser.Scene {
         this.playerData = data.player;
         this.currentlyNearNPC = null;
         this.dialogueOpen = false;
-        this.inventory = []; // ✅ minimal inventory
+        this.inventory = [];
+        this.introShown = false;
+        this.joyTouch = null;
     }
 
     create() {
         // Music
         this.game.audioManager.playMusic('overworld_theme', { volume: 0.5 });
 
-        //Dialogue
+        // Dialogue trees
         this.npcDialogues = this.cache.json.get('npcDialogues');
 
-        // ---- WORLD
+        // ---- WORLD ----
         const map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('Overworld', 'overworld_tiles');
         const belowLayer = map.createLayer('Below', tileset, 0, 0);
@@ -469,14 +542,14 @@ class OverworldScene extends Phaser.Scene {
         const aboveLayer = map.createLayer('Above', tileset, 0, 0);
         worldLayer.setCollisionByProperty({ collides: true });
 
-        // Controls
+        // ---- CONTROLS ----
         this.cursors = this.input.keyboard.createCursorKeys();
         this.keyW = this.input.keyboard.addKey('W');
         this.keyA = this.input.keyboard.addKey('A');
         this.keyS = this.input.keyboard.addKey('S');
         this.keyD = this.input.keyboard.addKey('D');
 
-        // ---- PLAYER
+        // ---- PLAYER ----
         const spawnPoint = map.findObject('Objects', obj => obj.name === 'SpawnPoint') || { x: 100, y: 100 };
         this.player = this.physics.add.sprite(spawnPoint.x, spawnPoint.y, this.playerData.id + '_idle', 4);
         this.player.setScale(0.33).setCollideWorldBounds(true).play(this.playerData.id + '_idle_down');
@@ -484,7 +557,7 @@ class OverworldScene extends Phaser.Scene {
         this.physics.add.collider(this.player, worldLayer);
         this.player.body.setSize(this.player.width, this.player.height, true);
 
-        // ---- NPCs
+        // ---- NPCs ----
         this.angryBridesmaid = this.physics.add.sprite(200, 200, 'angry_bridesmaid_idle', 4)
             .setImmovable(true).setScale(0.33).play('angry_bridesmaid_idle_down');
         this.priest = this.physics.add.sprite(600, 380, 'priest_idle', 4)
@@ -499,44 +572,45 @@ class OverworldScene extends Phaser.Scene {
         this.priest.npcName = 'Priest';
         this.drunkUncle.npcName = 'Drunk Uncle';
 
-        // ---- MAIN CAMERA
+        // ---- CAMERA ----
         const mainCam = this.cameras.main;
         this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
         mainCam.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
         mainCam.startFollow(this.player, true, 0.1, 0.1);
         mainCam.setZoom(SCALE);
 
-        // ---- UI CAMERA
+        // ---- UI ROOT ----
         this.uiRoot = this.add.container(0, 0).setDepth(10000).setScrollFactor(0);
         mainCam.ignore(this.uiRoot);
         this.uiCam = this.cameras.add(0, 0, GAME_WIDTH, GAME_HEIGHT, false);
         this.uiCam.setZoom(1);
         this.uiCam.setScroll(0, 0);
-        this.uiCam.ignore([belowLayer, worldLayer, aboveLayer, this.player, this.angryBridesmaid, this.priest, this.drunkUncle]);
+        this.uiCam.ignore([
+            belowLayer, worldLayer, aboveLayer,
+            this.player, this.angryBridesmaid, this.priest, this.drunkUncle
+        ]);
 
-        // ---- HUD
+        // ---- HUD ----
         this.hud = this.add.text(GAME_WIDTH - 200, 16,
             `${this.playerData.displayName}\nHP: ${this.playerData.hp}`,
             { font: '14px monospace', backgroundColor: '#00000080', fill: '#ffffff', padding: 6 }
         ).setScrollFactor(0);
         this.uiRoot.add(this.hud);
 
-        // 🎒 Inventory HUD (3 slots, bottom center)
-        this.inventorySlots = [];
-        const slotSize = 32;
-        const spacing = 40;
-        const startX = GAME_WIDTH / 2 - spacing; // centers 3 slots
-        const y = GAME_HEIGHT - 50;
+        // ---- Mobile controls ----
+        if (isMobile) this.createMobileControls();
 
+        // ---- INVENTORY HUD ----
+        this.inventorySlots = [];
+        const slotSize = 32, spacing = 40, startX = GAME_WIDTH / 2 - spacing, y = GAME_HEIGHT - 50;
         for (let i = 0; i < 3; i++) {
             const slot = this.add.rectangle(startX + i * spacing, y, slotSize, slotSize, 0x000000, 0.5)
-                .setStrokeStyle(2, 0xffffff)
-                .setScrollFactor(0);
+                .setStrokeStyle(2, 0xffffff).setScrollFactor(0);
             this.uiRoot.add(slot);
             this.inventorySlots.push(slot);
         }
 
-        // ---- NPC PROMPT
+        // ---- PROMPT LABEL ----
         this.promptLabel = this.add.text(0, 0, '', {
             font: '12px monospace',
             backgroundColor: '#000A',
@@ -545,34 +619,37 @@ class OverworldScene extends Phaser.Scene {
         }).setOrigin(0.5, 1).setVisible(false).setScrollFactor(0);
         this.uiRoot.add(this.promptLabel);
 
-        // ---- DIALOGUE
-        this.dialogBox = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 140, GAME_WIDTH - 120, 120, 0x000000, 0.7)
-            .setOrigin(0.5, 0).setVisible(false).setScrollFactor(0);
-        this.dialogText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 132, '', {
+        // ---- DIALOG BOX (reused for all NPCs) ----
+        this.dialogBox = this.add.rectangle(0, 0, 240, 100, 0x000000, 0.7)
+            .setVisible(false).setScrollFactor(0).setDepth(20000);
+        this.dialogText = this.add.text(0, 0, '', {
             font: '14px monospace',
-            wordWrap: { width: GAME_WIDTH - 140, useAdvancedWrap: true },
+            wordWrap: { width: 220, useAdvancedWrap: true },
             align: 'center',
             color: '#fff'
-        }).setOrigin(0.5, 0).setVisible(false).setScrollFactor(0);
+        }).setOrigin(0.5, 0).setVisible(false).setScrollFactor(0).setDepth(20001);
         this.uiRoot.add([this.dialogBox, this.dialogText]);
 
-        // ---- OVERLAPS
+        // ---- OVERLAPS ----
         const near = (npc) => () => this.setNearbyNPC(npc);
         this.physics.add.overlap(this.player, this.angryBridesmaid, near(this.angryBridesmaid), null, this);
         this.physics.add.overlap(this.player, this.priest, near(this.priest), null, this);
         this.physics.add.overlap(this.player, this.drunkUncle, near(this.drunkUncle), null, this);
 
-        // ---- SPACE for dialogue
+        // ---- SPACE KEY ----
         this.input.keyboard.on('keydown-SPACE', () => {
-            if (this.dialogueOpen) {
-                this.closeDialogue();
-            } else if (this.currentlyNearNPC) {
-                this.openDialogueFor(this.currentlyNearNPC);
-            }
+            if (this.dialogueOpen) this.closeDialogue();
+            else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
         });
+
+        // ✅ Intro quest
+        if (!this.introShown) {
+            this.introShown = true;
+            this.showIntroQuest();
+        }
     }
 
-    // ===== Prompt =====
+    // ===== NPC PROMPTS =====
     setNearbyNPC(npc) {
         this.currentlyNearNPC = npc;
         this.promptLabel.setText('[SPACE] Talk to ' + npc.npcName);
@@ -592,11 +669,10 @@ class OverworldScene extends Phaser.Scene {
         this.promptLabel.setPosition(sx, sy);
     }
 
-    // ===== Dialogue Tree =====
+    // ===== DIALOGUE SYSTEM =====
     openDialogueFor(npc) {
         const tree = this.npcDialogues[npc.npcName];
         if (!tree) return;
-
         this.dialogueTree = tree;
         this.dialogueNode = tree[0];
         this.dialogueNpc = npc;
@@ -607,15 +683,45 @@ class OverworldScene extends Phaser.Scene {
         if (this.choiceButtons) this.choiceButtons.forEach(b => b.destroy());
         this.choiceButtons = [];
 
-        this.dialogText.setText(`${this.dialogueNpc.npcName}: ${node.text}`);
-        this.dialogBox.setVisible(true);
-        this.dialogText.setVisible(true);
+        const npc = this.dialogueNpc;
+        const cam = this.cameras.main;
+        const sx = (npc.x - cam.scrollX) * cam.zoom;
+        const sy = (npc.y - cam.scrollY) * cam.zoom;
+
+        const bubbleWidth = 240;
+
+        // Set text first so height is accurate
+        this.dialogText
+            .setText(`${npc.npcName}: ${node.text}`)
+            .setWordWrapWidth(bubbleWidth - 20)
+            .setVisible(true);
+
+        const textHeight = this.dialogText.height;
+        const bubbleHeight = textHeight + node.choices.length * 22 + 40;
+
+        // Flip bubble if too close to top
+        let bubbleY = sy - npc.displayHeight * 1.2;
+        if (bubbleY - bubbleHeight / 2 < 0) {
+            bubbleY = sy + npc.displayHeight * 1.2; // place below NPC
+        }
+
+        this.dialogBox
+            .setPosition(sx, bubbleY)
+            .setSize(bubbleWidth, bubbleHeight)
+            .setVisible(true);
+
+        // Reposition text neatly inside
+        this.dialogText.setPosition(sx, bubbleY - bubbleHeight / 2 + 20);
+
         this.hud.setVisible(false);
         this.dialogueOpen = true;
 
-        const startY = GAME_HEIGHT - 80;
+        // Choices inside box with padding from bottom
+        const startY = bubbleY - bubbleHeight / 2 + textHeight + 30;
+        const maxY = bubbleY + bubbleHeight / 2 - 20; // margin at bottom
         node.choices.forEach((choice, idx) => {
-            const btn = this.add.text(GAME_WIDTH / 2, startY + idx * 22, choice.text, {
+            const y = Math.min(startY + idx * 22, maxY);
+            const btn = this.add.text(sx, y, choice.text, {
                 font: '12px monospace',
                 backgroundColor: '#333',
                 padding: { x: 4, y: 2 },
@@ -631,9 +737,13 @@ class OverworldScene extends Phaser.Scene {
     chooseDialogueOption(choice) {
         if (choice.next === "battle" || choice.battle) {
             this.closeDialogue(true);
+            const foeId = this.dialogueNpc.npcName.replace(" ", "_").toLowerCase();
+            const foeData = this.game.characters.find(c => c.id === foeId);
+            if (!foeData) { console.warn("No foe data for", foeId); return; }
+
             this.scene.launch('BattleScene', {
                 player: this.playerData,
-                foe: { id: this.dialogueNpc.npcName.replace(" ", "_").toLowerCase(), name: this.dialogueNpc.npcName, hp: 80, moves: [{ name: "Angry Slap", power: 10 }] }
+                foe: foeData
             });
             this.scene.pause();
             return;
@@ -669,7 +779,6 @@ class OverworldScene extends Phaser.Scene {
             this.choiceButtons.forEach(b => b.destroy());
             this.choiceButtons = [];
         }
-
         if (!force) {
             this.dialogueTree = null;
             this.dialogueNode = null;
@@ -677,87 +786,147 @@ class OverworldScene extends Phaser.Scene {
         }
     }
 
-    // ===== Inventory HUD =====
-    updateInventoryHud() {
-        const frameMap = {
-            wedding_band: 0,
-            something_blue: 1,
-            wedding_veil: 2
-        };
+    // ===== INTRO QUEST TEXT =====
+    showIntroQuest() {
+        this.dialogText
+            .setText("The Groom is in despair!\n\nHe has lost three sacred treasures:\n💍 The Wedding Band\n👰 The Veil\n💙 Something Blue\n\nYou, brave Groomsman, must recover them\nfrom the guests you encounter —\nby words... or by force.")
+            .setWordWrapWidth(GAME_WIDTH - 120)
+            .setVisible(true);
+    
+        // Measure and resize box dynamically
+        const textHeight = this.dialogText.height;
+        const boxHeight = textHeight + 40;
+    
+        this.dialogBox
+            .setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2)
+            .setSize(GAME_WIDTH - 80, boxHeight)
+            .setVisible(true);
+    
+        this.dialogText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - boxHeight / 2 + 20);
+    
+        this.hud.setVisible(false);
+        this.dialogueOpen = true;
+    
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.dialogBox.setVisible(false);
+            this.dialogText.setVisible(false);
+            this.hud.setVisible(true);
+            this.dialogueOpen = false;
+        });
+    }    
 
+    // ===== MOBILE CONTROLS =====
+    createMobileControls() {
+        this.input.addPointer(1);
+        this.joyBase = this.add.circle(80, GAME_HEIGHT - 80, 40, 0x000000, 0.3)
+            .setScrollFactor(0).setDepth(2000);
+        this.joyStick = this.add.circle(80, GAME_HEIGHT - 80, 20, 0xffffff, 0.6)
+            .setScrollFactor(0).setDepth(2001);
+
+        this.actionBtn = this.add.text(GAME_WIDTH - 80, GAME_HEIGHT - 80, 'A', {
+            font: '24px monospace',
+            backgroundColor: '#FFD700',
+            color: '#000',
+            padding: { x: 16, y: 16 }
+        }).setOrigin(0.5).setInteractive().setScrollFactor(0).setDepth(2000);
+
+        this.actionBtn.on('pointerdown', () => {
+            if (this.dialogueOpen) this.closeDialogue();
+            else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
+        });
+
+        this.input.on('pointerdown', (p) => {
+            if (p.x < GAME_WIDTH / 2) {
+                this.joyTouch = p.id;
+                this.joyStick.setPosition(p.x, p.y);
+            }
+        });
+        this.input.on('pointermove', (p) => {
+            if (this.joyTouch === p.id) {
+                this.joyStick.setPosition(p.x, p.y);
+            }
+        });
+        this.input.on('pointerup', (p) => {
+            if (this.joyTouch === p.id) {
+                this.joyTouch = null;
+                this.joyStick.setPosition(this.joyBase.x, this.joyBase.y);
+            }
+        });
+    }
+
+    // ===== INVENTORY =====
+    updateInventoryHud() {
+        const frameMap = { wedding_band: 0, something_blue: 1, wedding_veil: 2 };
         this.inventorySlots.forEach((slot, i) => {
             if (slot.itemSprite) {
                 slot.itemSprite.destroy();
                 slot.itemSprite = null;
             }
-
             if (this.inventory[i]) {
                 const frame = frameMap[this.inventory[i]];
-                console.log("🎒 Updating HUD. Current inventory:", this.inventory);
                 if (frame !== undefined) {
                     const icon = this.add.image(slot.x, slot.y, 'quest_items', frame)
-                        .setOrigin(0.5)          // center in slot
-                        .setDisplaySize(28, 28)  // slightly smaller than 32×32
-                        .setScrollFactor(0)
-                        .setDepth(10100);        // above slots
-
+                        .setOrigin(0.5).setDisplaySize(28, 28).setScrollFactor(0).setDepth(10100);
                     this.uiRoot.add(icon);
                     slot.itemSprite = icon;
-                    console.log(`🖼 Added icon ${this.inventory[i]} at frame ${frame}`);
-
-
                 }
             }
         });
 
-        // 🎯 Check for full inventory → trigger final boss
         if (this.inventory.includes('wedding_band') &&
             this.inventory.includes('something_blue') &&
             this.inventory.includes('wedding_veil')) {
             console.log("✅ Player has all 3 items – final boss unlocked!");
             this.time.delayedCall(1000, () => {
+                const boss = this.game.characters.find(c => c.id === 'bridezilla');
+                if (!boss) return;
                 this.scene.launch('BattleScene', {
                     player: this.playerData,
-                    foe: {
-                        id: 'bridezilla',
-                        name: 'Bridezilla',
-                        hp: 200,
-                        moves: [
-                            { name: "Tearful Rage", power: 15 },
-                            { name: "Bouquet Slam", power: 25 }
-                        ]
-                    }
+                    foe: boss
                 });
                 this.scene.pause();
             });
         }
     }
 
-    // ===== Update loop =====
+    // ===== UPDATE LOOP =====
     update() {
         const speed = BASE_SPEED;
+        let moveX = 0, moveY = 0;
+
         if (this.dialogueOpen) {
             this.player.setVelocity(0, 0);
-        } else if (this.cursors.left.isDown || this.keyA.isDown) {
-            this.player.setVelocity(-speed, 0);
-            this.player.anims.play(this.playerData.id + '_walk_left', true);
-        } else if (this.cursors.right.isDown || this.keyD.isDown) {
-            this.player.setVelocity(speed, 0);
-            this.player.anims.play(this.playerData.id + '_walk_right', true);
-        } else if (this.cursors.up.isDown || this.keyW.isDown) {
-            this.player.setVelocity(0, -speed);
-            this.player.anims.play(this.playerData.id + '_walk_up', true);
-        } else if (this.cursors.down.isDown || this.keyS.isDown) {
-            this.player.setVelocity(0, speed);
-            this.player.anims.play(this.playerData.id + '_walk_down', true);
         } else {
-            this.player.setVelocity(0, 0);
-            const anim = this.player.anims.currentAnim;
-            if (anim) {
-                if (anim.key.includes('down')) this.player.anims.play(this.playerData.id + '_idle_down', true);
-                else if (anim.key.includes('up')) this.player.anims.play(this.playerData.id + '_idle_up', true);
-                else if (anim.key.includes('left')) this.player.anims.play(this.playerData.id + '_idle_left', true);
-                else if (anim.key.includes('right')) this.player.anims.play(this.playerData.id + '_idle_right', true);
+            if (isMobile && this.joyTouch) {
+                const dx = this.joyStick.x - this.joyBase.x;
+                const dy = this.joyStick.y - this.joyBase.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len > 10) {
+                    moveX = dx / len;
+                    moveY = dy / len;
+                }
+            } else {
+                if (this.cursors.left.isDown || this.keyA.isDown) moveX = -1;
+                else if (this.cursors.right.isDown || this.keyD.isDown) moveX = 1;
+                if (this.cursors.up.isDown || this.keyW.isDown) moveY = -1;
+                else if (this.cursors.down.isDown || this.keyS.isDown) moveY = 1;
+            }
+
+            this.player.setVelocity(moveX * speed, moveY * speed);
+
+            if (moveX < 0) this.player.anims.play(this.playerData.id + '_walk_left', true);
+            else if (moveX > 0) this.player.anims.play(this.playerData.id + '_walk_right', true);
+            else if (moveY < 0) this.player.anims.play(this.playerData.id + '_walk_up', true);
+            else if (moveY > 0) this.player.anims.play(this.playerData.id + '_walk_down', true);
+            else {
+                this.player.setVelocity(0, 0);
+                const anim = this.player.anims.currentAnim;
+                if (anim) {
+                    if (anim.key.includes('down')) this.player.anims.play(this.playerData.id + '_idle_down', true);
+                    else if (anim.key.includes('up')) this.player.anims.play(this.playerData.id + '_idle_up', true);
+                    else if (anim.key.includes('left')) this.player.anims.play(this.playerData.id + '_idle_left', true);
+                    else if (anim.key.includes('right')) this.player.anims.play(this.playerData.id + '_idle_right', true);
+                }
             }
         }
 
@@ -766,52 +935,58 @@ class OverworldScene extends Phaser.Scene {
             if (d > 64) this.clearNearbyNPC();
         }
         this.updateNpcPromptPos();
-
         this.hud.setText(`${this.playerData.displayName}\nHP: ${this.player.hp}`);
     }
 }
 
-
-// --- BattleScene (Containers + padding, safe wrapping, depths, polished) ---
 class BattleScene extends Phaser.Scene {
     constructor() { super('BattleScene'); }
+
     init(data) {
-        this.playerData = data.player;
-        this.foe = data.foe;
+        this.playerData = JSON.parse(JSON.stringify(data.player)); // clone so we don't overwrite base json
+        this.foeData = JSON.parse(JSON.stringify(data.foe));
     }
 
     create() {
-        // Layering guide: 0 bg, 1 platforms, 6 sprites, 5 UI (frames/text/bars)
         const DEPTH_BG = 0, DEPTH_PLATFORM = 1, DEPTH_UI = 5, DEPTH_SPRITES = 6;
-
-        // Music
         this.game.audioManager.playMusic('battle_theme', { volume: 0.5, fadeTime: 1500 });
 
         // --- Background ---
-        const bg = this.add.rectangle(0, 0, 800, 600, 0xf7f7f7).setOrigin(0).setDepth(DEPTH_BG);
-        bg.setAlpha(0);
-        this.tweens.add({ targets: bg, alpha: 1, duration: 300 });
+        this.bg = this.add.image(0, 0, 'battle_bg_grass')
+            .setOrigin(0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(DEPTH_BG);
 
-        // --- Platforms (under sprites) ---
+        // --- Platforms ---
         this.add.ellipse(620, 240, 120, 40, 0xd0d0d0).setStrokeStyle(1, 0x999999).setDepth(DEPTH_PLATFORM);
         this.add.ellipse(200, 420, 120, 40, 0xd0d0d0).setStrokeStyle(1, 0x999999).setDepth(DEPTH_PLATFORM);
 
-        // --- Sprites (always above UI so they aren't obscured) ---
+        // --- Sprites ---
         this.playerSprite = this.add.image(200, 360, 'battle_back_' + this.playerData.id)
-            .setDisplaySize(64, 64)
-            .setDepth(DEPTH_SPRITES);
-        this.foeSprite = this.add.image(620, 200, 'battle_front_' + this.foe.id)
-            .setDisplaySize(64, 64)
-            .setDepth(DEPTH_SPRITES);
+            .setDisplaySize(64, 64).setDepth(DEPTH_SPRITES);
+        this.foeSprite = this.add.image(620, 200, 'battle_front_' + this.foeData.id)
+            .setDisplaySize(64, 64).setDepth(DEPTH_SPRITES);
+
+        // --- Setup stats ---
+        this.playerState = {
+            maxHP: this.playerData.hp,
+            hp: this.playerData.hp,
+            atkMod: 1,
+            defMod: 1,
+            status: {},
+        };
+        this.foeState = {
+            maxHP: this.foeData.hp,
+            hp: this.foeData.hp,
+            atkMod: 1,
+            defMod: 1,
+            status: {},
+        };
 
         // ===== UI HELPERS =====
         const makePanel = (x, y, w, h) => {
-            // Shadow + frame in a container at top-left
             const c = this.add.container(x, y).setDepth(DEPTH_UI);
             const shadow = this.add.rectangle(4, 4, w, h, 0x000000, 0.08).setOrigin(0);
             const frame = this.add.rectangle(0, 0, w, h, 0xffffff, 1).setOrigin(0).setStrokeStyle(2, 0x111111);
             c.add([shadow, frame]);
-            c._frame = frame; // keep for bounds if needed
             return c;
         };
 
@@ -819,18 +994,14 @@ class BattleScene extends Phaser.Scene {
             const t = this.add.text(padX, padY, text, {
                 font: '16px monospace',
                 fill: '#111',
-                wordWrap: { width: maxWidth, useAdvancedWrap: true },
-                align: 'left'
+                wordWrap: { width: maxWidth, useAdvancedWrap: true }
             }).setOrigin(0, 0);
             parent.add(t);
             return t;
         };
 
-        const addHP = (parent, frameWidth, frameHeight, opts = {}) => {
-            const pad = 10;
-            const barW = opts.barW ?? 140;
-            const barH = opts.barH ?? 10;
-            // Place on right side, vertically centered near bottom
+        const addHP = (parent, frameWidth, frameHeight) => {
+            const pad = 10, barW = 140, barH = 10;
             const x = frameWidth - pad - barW / 2;
             const y = frameHeight - pad - barH / 2;
 
@@ -840,179 +1011,198 @@ class BattleScene extends Phaser.Scene {
             const bg = this.add.rectangle(x, y, barW, barH, 0x888888).setOrigin(0.5);
             const fill = this.add.rectangle(x, y, barW, barH, 0x44cc44).setOrigin(0.5);
             parent.add([label, bg, fill]);
-
-            return { bg, fill, barW };
-        };
-
-        const tweenHPTo = (barFill, ratio, duration = 250) => {
-            const clamped = Phaser.Math.Clamp(ratio, 0, 1);
-            this.tweens.add({
-                targets: barFill,
-                scaleX: clamped,
-                duration,
-                onUpdate: () => {
-                    const r = barFill.scaleX;
-                    barFill.fillColor = (r > 0.6) ? 0x44cc44 : (r > 0.3 ? 0xffcc00 : 0xff4444);
-                }
-            });
+            return { fill, barW };
         };
 
         // ===== INFO BOXES =====
-        // Foe info (top-right)
         this.foeUI = makePanel(420, 40, 320, 60);
-        this.foeText = addLabel(this.foeUI, `${this.foe.name} Lv.5`, 10, 10, 320 - 10 - 10);
+        this.foeText = addLabel(this.foeUI, `${this.foeData.displayName} Lv.5`, 10, 10, 300);
         const foeHP = addHP(this.foeUI, 320, 60);
-        this.foeHPFill = foeHP.fill; // save reference
-        this.foeHPBarW = foeHP.barW;
+        this.foeHPFill = foeHP.fill;
 
-        // Player info (near hero, but won't cover him because sprites are depth 6)
-        // Move this box a little higher to avoid visual overlap with the head
         this.playerUI = makePanel(40, 270, 320, 60);
-        this.playerText = addLabel(this.playerUI, `${this.playerData.displayName} Lv.5`, 10, 10, 320 - 10 - 10);
+        this.playerText = addLabel(this.playerUI, `${this.playerData.displayName} Lv.5`, 10, 10, 300);
         const plyHP = addHP(this.playerUI, 320, 60);
         this.playerHPFill = plyHP.fill;
-        this.playerHPBarW = plyHP.barW;
 
-        // ===== DIALOGUE =====
+        // ===== Dialogue + Menu =====
         this.dialogUI = makePanel(20, 400, 760, 90);
-        this.log = addLabel(this.dialogUI, 'What will you do?', 12, 12, 760 - 24);
+        this.log = addLabel(this.dialogUI, 'What will you do?', 12, 12, 740);
 
-        // ===== MOVE MENU (2 columns inside the box) =====
         this.menuUI = makePanel(20, 500, 760, 90);
         this.moveButtons = [];
-        {
-            const pad = 12;
-            const innerW = 760 - pad * 2;
-            const innerH = 90 - pad * 2;
-            const cols = 2;
-            const gutter = 16;
-            const colW = (innerW - gutter) / cols;
-            const rowH = 30;
+        const cols = 2, gutter = 16, pad = 12;
+        const colW = (760 - pad * 2 - gutter) / cols;
+        const rowH = 30;
 
-            this.playerData.moves.forEach((m, idx) => {
-                const col = idx % cols;
-                const row = Math.floor(idx / cols);
-                const x = pad + col * (colW + gutter);
-                const y = pad + row * rowH;
+        this.playerData.moves.forEach((m, idx) => {
+            const col = idx % cols;
+            const row = Math.floor(idx / cols);
+            const x = pad + col * (colW + gutter);
+            const y = pad + row * rowH;
 
-                // Button as its own mini-container so text never bleeds
-                const btnC = this.add.container(x, y);
-                const btnBg = this.add.rectangle(0, 0, colW, 26, 0xeeeeee, 1).setOrigin(0);
-                btnBg.setStrokeStyle(1, 0xbbbbbb);
-                const t = this.add.text(8, 5, m.name.toUpperCase(), {
-                    font: '14px monospace',
-                    fill: '#000',
-                    wordWrap: { width: colW - 16, useAdvancedWrap: true }
-                }).setOrigin(0, 0);
+            const btnC = this.add.container(x, y);
+            const btnBg = this.add.rectangle(0, 0, colW, 26, 0xeeeeee).setOrigin(0).setStrokeStyle(1, 0xbbbbbb);
+            const t = this.add.text(8, 5, m.name.toUpperCase(), {
+                font: '14px monospace', fill: '#000', wordWrap: { width: colW - 16 }
+            }).setOrigin(0, 0);
+            btnC.add([btnBg, t]);
+            btnC.setSize(colW, 26).setInteractive(new Phaser.Geom.Rectangle(0, 0, colW, 26), Phaser.Geom.Rectangle.Contains);
 
-                btnC.add([btnBg, t]);
-                btnC.setSize(colW, 26).setInteractive(new Phaser.Geom.Rectangle(0, 0, colW, 26), Phaser.Geom.Rectangle.Contains);
+            btnC.on('pointerover', () => btnBg.setFillStyle(0xdddddd));
+            btnC.on('pointerout', () => btnBg.setFillStyle(0xeeeeee));
+            btnC.on('pointerdown', () => this.playerUseMove(idx));
 
-                btnC.on('pointerover', () => btnBg.setFillStyle(0xdddddd, 1));
-                btnC.on('pointerout', () => btnBg.setFillStyle(0xeeeeee, 1));
-                btnC.on('pointerdown', () => this.playerUseMove(idx));
-
-                this.menuUI.add(btnC);
-                this.moveButtons.push(btnC);
-            });
-        }
+            this.menuUI.add(btnC);
+            this.moveButtons.push(btnC);
+        });
 
         // --- State ---
-        this.playerHP = this.playerData.hp;
-        this.foeHP = this.foe.hp;
         this.currentTurn = 'player';
-        // initialize HP visuals
         this.updateHPBars(true);
     }
 
-    updateHPBars(skipTween = false) {
-        const pRatio = this.playerHP / this.playerData.hp;
-        const fRatio = this.foeHP / this.foe.hp;
+    // ====== CORE HELPERS ======
+    rollAccuracy(move) {
+        return Phaser.Math.Between(1, 100) <= (move.accuracy || 100);
+    }
 
-        if (skipTween) {
-            this.playerHPFill.scaleX = Phaser.Math.Clamp(pRatio, 0, 1);
-            this.foeHPFill.scaleX = Phaser.Math.Clamp(fRatio, 0, 1);
-            this.playerHPFill.fillColor = (pRatio > 0.6) ? 0x44cc44 : (pRatio > 0.3 ? 0xffcc00 : 0xff4444);
-            this.foeHPFill.fillColor = (fRatio > 0.6) ? 0x44cc44 : (fRatio > 0.3 ? 0xffcc00 : 0xff4444);
-        } else {
-            // tween to new value
-            this.tweens.killTweensOf(this.playerHPFill);
-            this.tweens.killTweensOf(this.foeHPFill);
-            const tweenHPTo = (barFill, ratio) => {
-                const clamped = Phaser.Math.Clamp(ratio, 0, 1);
-                this.tweens.add({
-                    targets: barFill,
-                    scaleX: clamped,
-                    duration: 280,
-                    onUpdate: () => {
-                        const r = barFill.scaleX;
-                        barFill.fillColor = (r > 0.6) ? 0x44cc44 : (r > 0.3 ? 0xffcc00 : 0xff4444);
-                    }
-                });
-            };
-            tweenHPTo(this.playerHPFill, pRatio);
-            tweenHPTo(this.foeHPFill, fRatio);
+    applyDamage(attacker, defender, move) {
+        let dmg = move.power || 0;
+        dmg *= attacker.atkMod || 1;
+        dmg *= 1 / (defender.defMod || 1);
+        defender.hp = Math.max(0, defender.hp - dmg);
+        return Math.round(dmg);
+    }
+
+    applyEffect(target, effect) {
+        if (!effect) return;
+        if (effect.chanceConfuse && Phaser.Math.Between(1, 100) <= effect.chanceConfuse) {
+            target.status.confuse = effect.durationTurns || 2;
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} is confused!`);
+        }
+        if (effect.chanceSkip && Phaser.Math.Between(1, 100) <= effect.chanceSkip) {
+            target.status.skip = 1;
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} flinched!`);
+        }
+        if (effect.sleep) {
+            target.status.sleep = effect.durationTurns || 2;
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} fell asleep!`);
+        }
+        if (effect.stun) {
+            target.status.stun = effect.durationTurns || 1;
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} is stunned!`);
+        }
+        if (effect.bleed) {
+            target.status.bleed = effect.durationTurns || 2;
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} is bleeding!`);
+        }
+        if (effect.atkBoost) {
+            target.atkMod *= (1 + effect.atkBoost / 100);
+            target.status.atkBoost = effect.durationTurns || 2;
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} attack rose!`);
+        }
+        if (effect.defBoost) {
+            target.defMod *= (1 + effect.defBoost / 100);
+            target.status.defBoost = effect.durationTurns || 2;
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} defense rose!`);
+        }
+        if (effect.atkDebuff) {
+            target.atkMod *= (1 - effect.atkDebuff / 100);
+            target.status.atkDebuff = effect.durationTurns || 2;
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} attack fell!`);
+        }
+        if (effect.reduceDefPct) {
+            target.defMod *= (1 - effect.reduceDefPct / 100);
+            target.status.defDebuff = effect.durationTurns || 2;
+            this.log.setText(`${target === this.playerData.displayName ? this.playerData.displayName : this.foeData.displayName} defense fell!`);
         }
     }
 
-    // ===== Turn flow =====
+    tickStatuses(target) {
+        // apply DOT effects
+        if (target.status.bleed) {
+            const bleedDmg = Math.round(target.maxHP * 0.05);
+            target.hp = Math.max(0, target.hp - bleedDmg);
+            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} bleeds for ${bleedDmg} damage!`);
+            target.status.bleed--;
+        }
+        if (target.status.sleep) target.status.sleep--;
+        if (target.status.stun) target.status.stun--;
+        if (target.status.skip) target.status.skip--;
+        if (target.status.confuse) target.status.confuse--;
+        if (target.status.atkBoost) target.status.atkBoost--;
+        if (target.status.defBoost) target.status.defBoost--;
+        if (target.status.atkDebuff) target.status.atkDebuff--;
+        if (target.status.defDebuff) target.status.defDebuff--;
+    }
+
+    // ===== TURN HANDLERS =====
     playerUseMove(idx) {
         if (this.currentTurn !== 'player') return;
-
         const move = this.playerData.moves[idx];
-        const damage = move.power || 0;
-        this.foeHP = Math.max(0, this.foeHP - damage);
 
-        let log = `${this.playerData.displayName} used ${move.name}!`;
-        if (move.type === 'psychic') log += "\nThe foe stares into the void...";
-        else if (move.type === 'trick') log += "\nThe foe's confidence is mildly shaken.";
-        else log += "\nIt was oddly specific.";
-        this.log.setText(log);
+        if (!this.rollAccuracy(move)) {
+            this.log.setText(`${this.playerData.displayName}'s ${move.name} missed!`);
+        } else {
+            const dmg = this.applyDamage(this.playerState, this.foeState, move);
+            this.applyEffect(this.foeState, move.effect);
+            this.log.setText(`${this.playerData.displayName} used ${move.name}! ${dmg > 0 ? "It dealt " + dmg + "!" : ""}`);
+        }
 
         this.updateHPBars();
-
-        if (this.foeHP <= 0) return this.win();
+        if (this.foeState.hp <= 0) return this.win();
 
         this.currentTurn = 'foe';
         this.time.delayedCall(1800, () => this.foeAction(), [], this);
     }
 
     foeAction() {
-        if (this.foeHP <= 0) return;
+        if (this.foeState.hp <= 0) return;
+        const move = Phaser.Utils.Array.GetRandom(this.foeData.moves);
 
-        const m = this.foe.moves[Math.floor(Math.random() * this.foe.moves.length)];
-        this.playerHP = Math.max(0, this.playerHP - m.power);
-
-        let text = `${this.foe.name} used ${m.name}!`;
-        text += m.power > 15 ? "\nIt’s ridiculously overkill!" : "\nIt’s vaguely annoying.";
-        this.log.setText(text);
+        if (!this.rollAccuracy(move)) {
+            this.log.setText(`${this.foeData.displayName}'s ${move.name} missed!`);
+        } else {
+            const dmg = this.applyDamage(this.foeState, this.playerState, move);
+            this.applyEffect(this.playerState, move.effect);
+            this.log.setText(`${this.foeData.displayName} used ${move.name}! ${dmg > 0 ? "It dealt " + dmg + "!" : ""}`);
+        }
 
         this.updateHPBars();
-
-        if (this.playerHP <= 0) return this.lose();
+        if (this.playerState.hp <= 0) return this.lose();
 
         this.currentTurn = 'player';
-        this.time.delayedCall(1800, () => { }, [], this);
     }
 
+    // ===== WIN / LOSE =====
     win() {
-        this.log.setText(`${this.playerData.displayName} is victorious!\nFoe is now emotionally unstable.`);
+        this.log.setText(`${this.playerData.displayName} is victorious!`);
         this.time.delayedCall(2000, () => {
             this.scene.stop('BattleScene');
             this.scene.resume('OverworldScene');
             this.game.audioManager.playMusic('overworld_theme', { volume: 0.5 });
-        }, [], this);
+        });
     }
 
     lose() {
-        this.log.setText(`You fainted...\nAnd dropped your dignity.`);
+        this.log.setText(`You fainted...`);
         this.time.delayedCall(2000, () => {
             this.scene.stop('BattleScene');
             this.scene.resume('OverworldScene');
             this.game.audioManager.playMusic('overworld_theme', { volume: 0.5 });
-        }, [], this);
+        });
     }
 
+    // ===== HP BAR UPDATE =====
+    updateHPBars(skipTween = false) {
+        const pRatio = this.playerState.hp / this.playerState.maxHP;
+        const fRatio = this.foeState.hp / this.foeState.maxHP;
+        this.playerHPFill.scaleX = Phaser.Math.Clamp(pRatio, 0, 1);
+        this.foeHPFill.scaleX = Phaser.Math.Clamp(fRatio, 0, 1);
+        this.playerHPFill.fillColor = (pRatio > 0.6) ? 0x44cc44 : (pRatio > 0.3 ? 0xffcc00 : 0xff4444);
+        this.foeHPFill.fillColor = (fRatio > 0.6) ? 0x44cc44 : (fRatio > 0.3 ? 0xffcc00 : 0xff4444);
+    }
 }
 
 //Phaser config

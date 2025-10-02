@@ -4,16 +4,43 @@
 <meta charset="utf-8">
 <title>Legend of the Best Men</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ✅ Import retro fonts from Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&family=VT323&display=swap" rel="stylesheet">
+
 <style>
-  body { margin:0; background:#111; color:#eee; font-family: Inter, system-ui, sans-serif; }
-  #game-container { width:100vw; height:100vh; overflow:hidden; }
-  .instructions { position:absolute; left:10px; top:10px; z-index:10; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:6px; }
+  body { 
+    margin:0; 
+    background:#111; 
+    color:#eee; 
+    font-family: Inter, system-ui, sans-serif; 
+  }
+  #game-container { 
+    width:100vw; 
+    height:100vh; 
+    overflow:hidden; 
+  }
+  .instructions { 
+    position:absolute; 
+    left:10px; 
+    top:10px; 
+    z-index:10; 
+    background:rgba(0,0,0,0.5); 
+    padding:8px 12px; 
+    border-radius:6px; 
+  }
 </style>
 </head>
 <body>
   <div id="game-container"></div>
-  <div class="instructions">Arrows/WASD to move. Space to interact. Click a character and press Start Game.</div>
+  <div class="instructions">
+    Arrows/WASD to move. Space to interact. Click a character and press Start Game.
+    <span style="cursor:pointer; float:right; margin-left:10px;" onclick="this.parentElement.remove()">✖</span>
+  </div>
+
+  <!-- Phaser -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>
