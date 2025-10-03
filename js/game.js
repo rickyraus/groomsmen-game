@@ -281,10 +281,30 @@ class TitleScene extends Phaser.Scene {
             this.stars.add(star);
         }
 
-        // --- Input: SPACE to Continue ---
-        this.input.keyboard.once('keydown-SPACE', async () => {
+        // Fullscreen button
+        const fsBtn = this.add.text(GAME_WIDTH - 20, GAME_HEIGHT - 20, '⛶', {
+            font: '24px monospace',
+            fill: '#fff',
+            backgroundColor: '#00000088',
+            padding: { x: 6, y: 2 }
+        })
+            .setOrigin(1, 1)
+            .setInteractive({ useHandCursor: true })
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        fsBtn.on('pointerdown', () => {
+            if (this.scale.isFullscreen) {
+                this.scale.stopFullscreen();
+            } else {
+                this.scale.startFullscreen();
+            }
+        });
+
+        // --- Input: SPACE or TAP to Continue ---
+        const startGame = async () => {
             try {
-                // Fix Chrome autoplay policy
+                // Fix Chrome autoplay policy on mobile
                 if (this.sound.context.state === 'suspended') {
                     await this.sound.context.resume();
                 }
@@ -295,7 +315,12 @@ class TitleScene extends Phaser.Scene {
             // Play menu theme + transition
             this.game.audioManager.playMusic('menu_theme', { volume: 1 });
             this.scene.start('CharacterSelectScene');
-        });
+        };
+
+        // ✅ Support both keyboard and touch
+        this.input.keyboard.once('keydown-SPACE', startGame);
+        this.input.once('pointerdown', startGame);
+
     }
 
     update() {
@@ -493,7 +518,43 @@ class CharacterSelectScene extends Phaser.Scene {
 
         // init selection
         this.select(0, CHARACTERS);
+
+        // --- Input: SPACE or TAP to Start ---
+        const startGame = async () => {
+            try {
+                if (this.sound.context.state === 'suspended') {
+                    await this.sound.context.resume();
+                }
+            } catch (e) {
+                console.warn("⚠️ Audio resume failed:", e);
+            }
+
+            const chosen = CHARACTERS[this.selected];
+            this.scene.start('OverworldScene', { player: chosen });
+        };
+
+        // Desktop: SPACE starts
+        this.input.keyboard.once('keydown-SPACE', startGame);
+
+        // Mobile: tap anywhere not on a card/button also starts
+        this.input.on('pointerdown', (pointer, currentlyOver) => {
+            if (currentlyOver.length === 0) {
+                startGame();
+            }
+        });
+
+        // ✅ Optional helper text for mobile users
+        if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            this.add.text(W / 2, H - 20, '👆 Tap Start or screen to begin', {
+                fontFamily: '"VT323"',
+                fontSize: '16px',
+                color: '#fff',
+                backgroundColor: '#00000088',
+                padding: { x: 6, y: 2 }
+            }).setOrigin(0.5).setDepth(999);
+        }
     }
+
 
     select(idx, CHARACTERS) {
         this.selected = idx;
@@ -525,6 +586,20 @@ class OverworldScene extends Phaser.Scene {
         this.inventory = [];
         this.introShown = false;
         this.joyTouch = null;
+
+        // Dialogue UI refs
+        this.dialogBox = null;
+        this.dialogText = null;
+        this.choiceButtons = [];
+
+        // Random dismissive lines when NPC already spent
+        this.dismissiveLines = [
+            "I have nothing more to say to you.",
+            "Leave me alone, I’m busy.",
+            "We’ve spoken enough already.",
+            "Go bother someone else.",
+            "The conversation is over."
+        ];
     }
 
     create() {
@@ -532,7 +607,8 @@ class OverworldScene extends Phaser.Scene {
         this.game.audioManager.playMusic('overworld_theme', { volume: 0.5 });
 
         // Dialogue trees
-        this.npcDialogues = this.cache.json.get('npcDialogues');
+        this.npcDialogues = this.cache.json.get('npcDialogues') || {};
+        console.log("[Overworld] npcDialogues keys:", Object.keys(this.npcDialogues));
 
         // ---- WORLD ----
         const map = this.make.tilemap({ key: 'map' });
@@ -567,6 +643,7 @@ class OverworldScene extends Phaser.Scene {
 
         [this.angryBridesmaid, this.priest, this.drunkUncle].forEach(npc => {
             npc.body.setSize(npc.width, npc.height, true);
+            npc.spent = false; // track if NPC already used
         });
         this.angryBridesmaid.npcName = 'Angry Bridesmaid';
         this.priest.npcName = 'Priest';
@@ -579,16 +656,13 @@ class OverworldScene extends Phaser.Scene {
         mainCam.startFollow(this.player, true, 0.1, 0.1);
         mainCam.setZoom(SCALE);
 
-        // ---- UI ROOT ----
+        // ---- UI ROOT + UI CAMERA ----
         this.uiRoot = this.add.container(0, 0).setDepth(10000).setScrollFactor(0);
         mainCam.ignore(this.uiRoot);
         this.uiCam = this.cameras.add(0, 0, GAME_WIDTH, GAME_HEIGHT, false);
         this.uiCam.setZoom(1);
         this.uiCam.setScroll(0, 0);
-        this.uiCam.ignore([
-            belowLayer, worldLayer, aboveLayer,
-            this.player, this.angryBridesmaid, this.priest, this.drunkUncle
-        ]);
+        this.uiCam.ignore([belowLayer, worldLayer, aboveLayer, this.player, this.angryBridesmaid, this.priest, this.drunkUncle]);
 
         // ---- HUD ----
         this.hud = this.add.text(GAME_WIDTH - 200, 16,
@@ -597,7 +671,6 @@ class OverworldScene extends Phaser.Scene {
         ).setScrollFactor(0);
         this.uiRoot.add(this.hud);
 
-        // ---- Mobile controls ----
         if (isMobile) this.createMobileControls();
 
         // ---- INVENTORY HUD ----
@@ -619,7 +692,7 @@ class OverworldScene extends Phaser.Scene {
         }).setOrigin(0.5, 1).setVisible(false).setScrollFactor(0);
         this.uiRoot.add(this.promptLabel);
 
-        // ---- DIALOG BOX (reused for all NPCs) ----
+        // ---- DIALOG BOX ----
         this.dialogBox = this.add.rectangle(0, 0, 240, 100, 0x000000, 0.7)
             .setVisible(false).setScrollFactor(0).setDepth(20000);
         this.dialogText = this.add.text(0, 0, '', {
@@ -642,7 +715,7 @@ class OverworldScene extends Phaser.Scene {
             else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
         });
 
-        // ✅ Intro quest
+        // Intro text
         if (!this.introShown) {
             this.introShown = true;
             this.showIntroQuest();
@@ -651,11 +724,13 @@ class OverworldScene extends Phaser.Scene {
 
     // ===== NPC PROMPTS =====
     setNearbyNPC(npc) {
+        if (npc.spent) return;
         this.currentlyNearNPC = npc;
-        this.promptLabel.setText('[SPACE] Talk to ' + npc.npcName);
+        const actionKey = isMobile ? '[A] Tap' : '[SPACE] Talk';
+        this.promptLabel.setText(`${actionKey} to ${npc.npcName}`);
         this.promptLabel.setVisible(true);
         this.updateNpcPromptPos();
-    }
+    }    
     clearNearbyNPC() {
         this.currentlyNearNPC = null;
         this.promptLabel.setVisible(false);
@@ -664,19 +739,53 @@ class OverworldScene extends Phaser.Scene {
         if (!this.currentlyNearNPC || !this.promptLabel.visible) return;
         const cam = this.cameras.main;
         const npc = this.currentlyNearNPC;
-        const sx = (npc.x - cam.scrollX) * cam.zoom;
-        const sy = (npc.y - npc.displayHeight * 0.8 - cam.scrollY) * cam.zoom;
-        this.promptLabel.setPosition(sx, sy);
+        const sx = npc.x - cam.scrollX;
+        const sy = npc.y - npc.displayHeight * 1.2 - cam.scrollY;
+        this.promptLabel.setPosition(
+            Phaser.Math.Clamp(sx, 40, GAME_WIDTH - 40),
+            Phaser.Math.Clamp(sy, 20, GAME_HEIGHT - 20)
+        );
     }
 
     // ===== DIALOGUE SYSTEM =====
     openDialogueFor(npc) {
+        this.promptLabel.setVisible(false); // hide prompt when talking
+
+        if (npc.spent) {
+            const randomLine = Phaser.Utils.Array.GetRandom(this.dismissiveLines);
+            this.showAdhocBubble(npc, randomLine);
+            return;
+        }
+
         const tree = this.npcDialogues[npc.npcName];
-        if (!tree) return;
+        if (!tree) {
+            this.showAdhocBubble(npc, `${npc.npcName} has nothing to say...`);
+            return;
+        }
         this.dialogueTree = tree;
         this.dialogueNode = tree[0];
         this.dialogueNpc = npc;
         this.showDialogueNode(this.dialogueNode);
+    }
+
+    showAdhocBubble(npc, text) {
+        const cam = this.cameras.main;
+        const sx = npc.x - cam.scrollX;
+        const sy = npc.y - cam.scrollY;
+        const bubbleWidth = 220;
+
+        this.dialogText.setText(text).setWordWrapWidth(bubbleWidth - 20).setVisible(true);
+        const textHeight = this.dialogText.height || 40;
+        const bubbleHeight = textHeight + 30;
+
+        let bubbleY = sy - npc.displayHeight * 1.4;
+        if (bubbleY - bubbleHeight / 2 < 0) bubbleY = sy + npc.displayHeight * 1.4;
+
+        this.dialogBox.setPosition(sx, bubbleY).setSize(bubbleWidth, bubbleHeight).setVisible(true);
+        this.dialogText.setPosition(sx, bubbleY - bubbleHeight / 2 + 16);
+
+        this.hud.setVisible(false);
+        this.dialogueOpen = true;
     }
 
     showDialogueNode(node) {
@@ -685,48 +794,41 @@ class OverworldScene extends Phaser.Scene {
 
         const npc = this.dialogueNpc;
         const cam = this.cameras.main;
-        const sx = (npc.x - cam.scrollX) * cam.zoom;
-        const sy = (npc.y - cam.scrollY) * cam.zoom;
+        let sx = npc.x - cam.scrollX;
+        const sy = npc.y - cam.scrollY;
 
-        const bubbleWidth = 240;
+        const bubbleWidth = isMobile ? 280 : 240;
+        const textSize = isMobile ? '16px monospace' : '14px monospace';
 
-        // Set text first so height is accurate
-        this.dialogText
-            .setText(`${npc.npcName}: ${node.text}`)
+        this.dialogText.setText(`${npc.npcName}: ${node.text}`)
             .setWordWrapWidth(bubbleWidth - 20)
-            .setVisible(true);
+            .setVisible(true).setStyle({ font: textSize });
 
-        const textHeight = this.dialogText.height;
-        const bubbleHeight = textHeight + node.choices.length * 22 + 40;
+        const textHeight = this.dialogText.height || 40;
+        const bubbleHeight = textHeight + node.choices.length * 26 + 44; // extra padding
 
-        // Flip bubble if too close to top
-        let bubbleY = sy - npc.displayHeight * 1.2;
-        if (bubbleY - bubbleHeight / 2 < 0) {
-            bubbleY = sy + npc.displayHeight * 1.2; // place below NPC
-        }
+        let bubbleY = sy - npc.displayHeight * 1.4;
+        if (bubbleY - bubbleHeight / 2 < 0) bubbleY = sy + npc.displayHeight * 1.4;
 
-        this.dialogBox
-            .setPosition(sx, bubbleY)
-            .setSize(bubbleWidth, bubbleHeight)
-            .setVisible(true);
+        sx = Phaser.Math.Clamp(sx, bubbleWidth / 2 + 8, GAME_WIDTH - bubbleWidth / 2 - 8);
 
-        // Reposition text neatly inside
-        this.dialogText.setPosition(sx, bubbleY - bubbleHeight / 2 + 20);
+        this.dialogBox.setPosition(sx, bubbleY).setSize(bubbleWidth, bubbleHeight).setVisible(true);
+        this.dialogText.setPosition(sx, bubbleY - bubbleHeight / 2 + 14);
 
         this.hud.setVisible(false);
         this.dialogueOpen = true;
 
-        // Choices inside box with padding from bottom
-        const startY = bubbleY - bubbleHeight / 2 + textHeight + 30;
-        const maxY = bubbleY + bubbleHeight / 2 - 20; // margin at bottom
+        const startY = bubbleY - bubbleHeight / 2 + textHeight + 32; // more gap
         node.choices.forEach((choice, idx) => {
-            const y = Math.min(startY + idx * 22, maxY);
-            const btn = this.add.text(sx, y, choice.text, {
+            const btnY = startY + idx * 26;
+            const btn = this.add.text(sx, btnY, choice.text, {
                 font: '12px monospace',
                 backgroundColor: '#333',
                 padding: { x: 4, y: 2 },
-                color: '#fff'
-            }).setOrigin(0.5).setInteractive();
+                color: '#fff',
+                wordWrap: { width: bubbleWidth - 30, useAdvancedWrap: true }, // ✅ wrap long lines
+                align: 'center'
+            }).setOrigin(0.5, 0).setInteractive();
 
             btn.on('pointerdown', () => this.chooseDialogueOption(choice));
             this.uiRoot.add(btn);
@@ -736,15 +838,12 @@ class OverworldScene extends Phaser.Scene {
 
     chooseDialogueOption(choice) {
         if (choice.next === "battle" || choice.battle) {
+            this.dialogueNpc.spent = true;
             this.closeDialogue(true);
-            const foeId = this.dialogueNpc.npcName.replace(" ", "_").toLowerCase();
+            const foeId = this.dialogueNpc.npcName.replace(/\s+/g, "_").toLowerCase();
             const foeData = this.game.characters.find(c => c.id === foeId);
-            if (!foeData) { console.warn("No foe data for", foeId); return; }
-
-            this.scene.launch('BattleScene', {
-                player: this.playerData,
-                foe: foeData
-            });
+            if (!foeData) return;
+            this.scene.launch('BattleScene', { player: this.playerData, foe: foeData, npc: this.dialogueNpc });
             this.scene.pause();
             return;
         }
@@ -753,11 +852,13 @@ class OverworldScene extends Phaser.Scene {
             this.inventory.push(choice.reward);
             this.updateInventoryHud();
             this.dialogText.setText(`${this.dialogueNpc.npcName}: You got ${choice.reward}!`);
-            this.time.delayedCall(1500, () => this.closeDialogue(), [], this);
+            this.dialogueNpc.spent = true;
+            this.time.delayedCall(1200, () => this.closeDialogue(), [], this);
             return;
         }
 
         if (choice.next === "end" || !choice.next) {
+            this.dialogueNpc.spent = true;
             this.closeDialogue();
             return;
         }
@@ -788,62 +889,59 @@ class OverworldScene extends Phaser.Scene {
 
     // ===== INTRO QUEST TEXT =====
     showIntroQuest() {
-        this.dialogText
-            .setText("The Groom is in despair!\n\nHe has lost three sacred treasures:\n💍 The Wedding Band\n👰 The Veil\n💙 Something Blue\n\nYou, brave Groomsman, must recover them\nfrom the guests you encounter —\nby words... or by force.")
-            .setWordWrapWidth(GAME_WIDTH - 120)
-            .setVisible(true);
-    
-        // Measure and resize box dynamically
-        const textHeight = this.dialogText.height;
-        const boxHeight = textHeight + 40;
-    
-        this.dialogBox
-            .setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2)
-            .setSize(GAME_WIDTH - 80, boxHeight)
-            .setVisible(true);
-    
-        this.dialogText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - boxHeight / 2 + 20);
-    
+        const intro =
+            "The Groom is in despair!\n\n" +
+            "He has lost three sacred treasures:\n" +
+            "💍 The Wedding Band\n👰 The Veil\n💙 Something Blue\n\n" +
+            "You, Chosen One, must recover them\n" +
+            "from the guests you encounter —\n" +
+            "by words... or by force.\n\n" +
+            "Press [SPACE] to begin";
+
+        this.dialogText.setText(intro).setWordWrapWidth(GAME_WIDTH - 120).setVisible(true);
+        const textHeight = this.dialogText.height || 120;
+        const boxHeight = textHeight + 36;
+
+        this.dialogBox.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2)
+            .setSize(GAME_WIDTH - 80, boxHeight).setVisible(true);
+        this.dialogText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - boxHeight / 2 + 14);
+
         this.hud.setVisible(false);
         this.dialogueOpen = true;
-    
+
         this.input.keyboard.once('keydown-SPACE', () => {
             this.dialogBox.setVisible(false);
             this.dialogText.setVisible(false);
             this.hud.setVisible(true);
             this.dialogueOpen = false;
         });
-    }    
+    }
 
     // ===== MOBILE CONTROLS =====
     createMobileControls() {
         this.input.addPointer(1);
+    
         this.joyBase = this.add.circle(80, GAME_HEIGHT - 80, 40, 0x000000, 0.3)
             .setScrollFactor(0).setDepth(2000);
         this.joyStick = this.add.circle(80, GAME_HEIGHT - 80, 20, 0xffffff, 0.6)
             .setScrollFactor(0).setDepth(2001);
-
-        this.actionBtn = this.add.text(GAME_WIDTH - 80, GAME_HEIGHT - 80, 'A', {
-            font: '24px monospace',
-            backgroundColor: '#FFD700',
-            color: '#000',
-            padding: { x: 16, y: 16 }
-        }).setOrigin(0.5).setInteractive().setScrollFactor(0).setDepth(2000);
-
-        this.actionBtn.on('pointerdown', () => {
-            if (this.dialogueOpen) this.closeDialogue();
-            else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
-        });
-
+    
+        // Track drag
         this.input.on('pointerdown', (p) => {
-            if (p.x < GAME_WIDTH / 2) {
+            if (Phaser.Math.Distance.Between(p.x, p.y, this.joyBase.x, this.joyBase.y) < 60) {
                 this.joyTouch = p.id;
-                this.joyStick.setPosition(p.x, p.y);
             }
         });
         this.input.on('pointermove', (p) => {
             if (this.joyTouch === p.id) {
-                this.joyStick.setPosition(p.x, p.y);
+                const dx = p.x - this.joyBase.x;
+                const dy = p.y - this.joyBase.y;
+                const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 40);
+                const angle = Math.atan2(dy, dx);
+                this.joyStick.setPosition(
+                    this.joyBase.x + Math.cos(angle) * dist,
+                    this.joyBase.y + Math.sin(angle) * dist
+                );
             }
         });
         this.input.on('pointerup', (p) => {
@@ -852,7 +950,20 @@ class OverworldScene extends Phaser.Scene {
                 this.joyStick.setPosition(this.joyBase.x, this.joyBase.y);
             }
         });
-    }
+    
+        this.actionBtn = this.add.circle(GAME_WIDTH - 80, GAME_HEIGHT - 80, 32, 0xFFD700)
+            .setScrollFactor(0).setDepth(2000).setInteractive();
+    
+        this.actionBtnText = this.add.text(this.actionBtn.x, this.actionBtn.y, 'A', {
+            font: '20px monospace',
+            color: '#000'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
+    
+        this.actionBtn.on('pointerdown', () => {
+            if (this.dialogueOpen) this.closeDialogue();
+            else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
+        });
+    }    
 
     // ===== INVENTORY =====
     updateInventoryHud() {
@@ -876,16 +987,8 @@ class OverworldScene extends Phaser.Scene {
         if (this.inventory.includes('wedding_band') &&
             this.inventory.includes('something_blue') &&
             this.inventory.includes('wedding_veil')) {
-            console.log("✅ Player has all 3 items – final boss unlocked!");
-            this.time.delayedCall(1000, () => {
-                const boss = this.game.characters.find(c => c.id === 'bridezilla');
-                if (!boss) return;
-                this.scene.launch('BattleScene', {
-                    player: this.playerData,
-                    foe: boss
-                });
-                this.scene.pause();
-            });
+            this.scene.launch('BattleScene', { player: this.playerData, foe: this.game.characters.find(c => c.id === 'bridezilla') });
+            this.scene.pause();
         }
     }
 
@@ -897,7 +1000,7 @@ class OverworldScene extends Phaser.Scene {
         if (this.dialogueOpen) {
             this.player.setVelocity(0, 0);
         } else {
-            if (isMobile && this.joyTouch) {
+            if (typeof isMobile !== 'undefined' && isMobile && this.joyTouch) {
                 const dx = this.joyStick.x - this.joyBase.x;
                 const dy = this.joyStick.y - this.joyBase.y;
                 const len = Math.sqrt(dx * dx + dy * dy);
@@ -934,6 +1037,7 @@ class OverworldScene extends Phaser.Scene {
             const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.currentlyNearNPC.x, this.currentlyNearNPC.y);
             if (d > 64) this.clearNearbyNPC();
         }
+
         this.updateNpcPromptPos();
         this.hud.setText(`${this.playerData.displayName}\nHP: ${this.player.hp}`);
     }
@@ -943,8 +1047,12 @@ class BattleScene extends Phaser.Scene {
     constructor() { super('BattleScene'); }
 
     init(data) {
-        this.playerData = JSON.parse(JSON.stringify(data.player)); // clone so we don't overwrite base json
+        this.playerData = JSON.parse(JSON.stringify(data.player));
         this.foeData = JSON.parse(JSON.stringify(data.foe));
+        this.npcRef = data.npc || null;
+
+        // ✅ ensure we keep CURRENT HP passed from overworld
+        this.initialPlayerHP = data.player.hp;
     }
 
     create() {
@@ -952,7 +1060,7 @@ class BattleScene extends Phaser.Scene {
         this.game.audioManager.playMusic('battle_theme', { volume: 0.5, fadeTime: 1500 });
 
         // --- Background ---
-        this.bg = this.add.image(0, 0, 'battle_bg_grass')
+        this.add.image(0, 0, 'battle_bg_grass')
             .setOrigin(0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(DEPTH_BG);
 
         // --- Platforms ---
@@ -967,29 +1075,23 @@ class BattleScene extends Phaser.Scene {
 
         // --- Setup stats ---
         this.playerState = {
-            maxHP: this.playerData.hp,
-            hp: this.playerData.hp,
-            atkMod: 1,
-            defMod: 1,
-            status: {},
+            maxHP: this.playerData.maxHP || this.playerData.hp,
+            hp: this.initialPlayerHP,   // ✅ persists current HP
+            atkMod: 1, defMod: 1, status: {}
         };
         this.foeState = {
             maxHP: this.foeData.hp,
             hp: this.foeData.hp,
-            atkMod: 1,
-            defMod: 1,
-            status: {},
+            atkMod: 1, defMod: 1, status: {}
         };
 
         // ===== UI HELPERS =====
         const makePanel = (x, y, w, h) => {
             const c = this.add.container(x, y).setDepth(DEPTH_UI);
-            const shadow = this.add.rectangle(4, 4, w, h, 0x000000, 0.08).setOrigin(0);
-            const frame = this.add.rectangle(0, 0, w, h, 0xffffff, 1).setOrigin(0).setStrokeStyle(2, 0x111111);
-            c.add([shadow, frame]);
+            c.add(this.add.rectangle(4, 4, w, h, 0x000000, 0.08).setOrigin(0));
+            c.add(this.add.rectangle(0, 0, w, h, 0xffffff, 1).setOrigin(0).setStrokeStyle(2, 0x111111));
             return c;
         };
-
         const addLabel = (parent, text, padX, padY, maxWidth) => {
             const t = this.add.text(padX, padY, text, {
                 font: '16px monospace',
@@ -999,31 +1101,25 @@ class BattleScene extends Phaser.Scene {
             parent.add(t);
             return t;
         };
-
         const addHP = (parent, frameWidth, frameHeight) => {
-            const pad = 10, barW = 140, barH = 10;
+            const barW = 140, barH = 10, pad = 10;
             const x = frameWidth - pad - barW / 2;
             const y = frameHeight - pad - barH / 2;
-
-            const label = this.add.text(x - barW / 2 - 28, y - 8, 'HP', {
-                font: '12px monospace', fill: '#333'
-            }).setOrigin(0, 0);
-            const bg = this.add.rectangle(x, y, barW, barH, 0x888888).setOrigin(0.5);
+            parent.add(this.add.text(x - barW / 2 - 28, y - 8, 'HP', { font: '12px monospace', fill: '#333' }).setOrigin(0, 0));
+            parent.add(this.add.rectangle(x, y, barW, barH, 0x888888).setOrigin(0.5));
             const fill = this.add.rectangle(x, y, barW, barH, 0x44cc44).setOrigin(0.5);
-            parent.add([label, bg, fill]);
+            parent.add(fill);
             return { fill, barW };
         };
 
         // ===== INFO BOXES =====
         this.foeUI = makePanel(420, 40, 320, 60);
         this.foeText = addLabel(this.foeUI, `${this.foeData.displayName} Lv.5`, 10, 10, 300);
-        const foeHP = addHP(this.foeUI, 320, 60);
-        this.foeHPFill = foeHP.fill;
+        this.foeHPFill = addHP(this.foeUI, 320, 60).fill;
 
         this.playerUI = makePanel(40, 270, 320, 60);
         this.playerText = addLabel(this.playerUI, `${this.playerData.displayName} Lv.5`, 10, 10, 300);
-        const plyHP = addHP(this.playerUI, 320, 60);
-        this.playerHPFill = plyHP.fill;
+        this.playerHPFill = addHP(this.playerUI, 320, 60).fill;
 
         // ===== Dialogue + Menu =====
         this.dialogUI = makePanel(20, 400, 760, 90);
@@ -1031,110 +1127,93 @@ class BattleScene extends Phaser.Scene {
 
         this.menuUI = makePanel(20, 500, 760, 90);
         this.moveButtons = [];
-        const cols = 2, gutter = 16, pad = 12;
-        const colW = (760 - pad * 2 - gutter) / cols;
-        const rowH = 30;
-
+        const cols = 2, gutter = 16, pad = 12, colW = (760 - pad * 2 - gutter) / cols, rowH = 30;
         this.playerData.moves.forEach((m, idx) => {
-            const col = idx % cols;
-            const row = Math.floor(idx / cols);
-            const x = pad + col * (colW + gutter);
-            const y = pad + row * rowH;
-
+            const col = idx % cols, row = Math.floor(idx / cols);
+            const x = pad + col * (colW + gutter), y = pad + row * rowH;
             const btnC = this.add.container(x, y);
-            const btnBg = this.add.rectangle(0, 0, colW, 26, 0xeeeeee).setOrigin(0).setStrokeStyle(1, 0xbbbbbb);
-            const t = this.add.text(8, 5, m.name.toUpperCase(), {
-                font: '14px monospace', fill: '#000', wordWrap: { width: colW - 16 }
-            }).setOrigin(0, 0);
-            btnC.add([btnBg, t]);
+            const bg = this.add.rectangle(0, 0, colW, 26, 0xeeeeee).setOrigin(0).setStrokeStyle(1, 0xbbbbbb);
+            const t = this.add.text(8, 5, m.name.toUpperCase(), { font: '14px monospace', fill: '#000', wordWrap: { width: colW - 16 } }).setOrigin(0, 0);
+            btnC.add([bg, t]);
             btnC.setSize(colW, 26).setInteractive(new Phaser.Geom.Rectangle(0, 0, colW, 26), Phaser.Geom.Rectangle.Contains);
-
-            btnC.on('pointerover', () => btnBg.setFillStyle(0xdddddd));
-            btnC.on('pointerout', () => btnBg.setFillStyle(0xeeeeee));
+            btnC.on('pointerover', () => bg.setFillStyle(0xdddddd));
+            btnC.on('pointerout', () => bg.setFillStyle(0xeeeeee));
             btnC.on('pointerdown', () => this.playerUseMove(idx));
-
             this.menuUI.add(btnC);
             this.moveButtons.push(btnC);
         });
 
-        // --- State ---
         this.currentTurn = 'player';
         this.updateHPBars(true);
     }
 
-    // ====== CORE HELPERS ======
-    rollAccuracy(move) {
-        return Phaser.Math.Between(1, 100) <= (move.accuracy || 100);
-    }
-
+    // ====== HELPERS ======
+    rollAccuracy(move) { return Phaser.Math.Between(1, 100) <= (move.accuracy || 100); }
     applyDamage(attacker, defender, move) {
-        let dmg = move.power || 0;
-        dmg *= attacker.atkMod || 1;
-        dmg *= 1 / (defender.defMod || 1);
+        let dmg = (move.power || 0) * (attacker.atkMod || 1) * (1 / (defender.defMod || 1));
         defender.hp = Math.max(0, defender.hp - dmg);
         return Math.round(dmg);
     }
 
-    applyEffect(target, effect) {
+    // ===== EFFECTS =====
+    applyEffect(target, effect, sourceName, targetName) {
         if (!effect) return;
+        if (effect.heal) {
+            target.hp = Math.min(target.maxHP, target.hp + effect.heal);
+            this.log.setText(`${sourceName} healed ${effect.heal} HP!`);
+        }
         if (effect.chanceConfuse && Phaser.Math.Between(1, 100) <= effect.chanceConfuse) {
             target.status.confuse = effect.durationTurns || 2;
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} is confused!`);
+            this.log.setText(`${targetName} is confused for ${target.status.confuse} turns!`);
         }
         if (effect.chanceSkip && Phaser.Math.Between(1, 100) <= effect.chanceSkip) {
             target.status.skip = 1;
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} flinched!`);
+            this.log.setText(`${targetName} flinched and will miss their next turn!`);
         }
         if (effect.sleep) {
             target.status.sleep = effect.durationTurns || 2;
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} fell asleep!`);
+            this.log.setText(`${targetName} fell asleep for ${target.status.sleep} turns!`);
         }
         if (effect.stun) {
             target.status.stun = effect.durationTurns || 1;
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} is stunned!`);
+            this.log.setText(`${targetName} is stunned for ${target.status.stun} turn(s)!`);
         }
         if (effect.bleed) {
             target.status.bleed = effect.durationTurns || 2;
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} is bleeding!`);
+            this.log.setText(`${targetName} is bleeding for ${target.status.bleed} turns!`);
         }
         if (effect.atkBoost) {
             target.atkMod *= (1 + effect.atkBoost / 100);
             target.status.atkBoost = effect.durationTurns || 2;
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} attack rose!`);
+            this.log.setText(`${targetName}'s attack rose for ${target.status.atkBoost} turns!`);
         }
         if (effect.defBoost) {
             target.defMod *= (1 + effect.defBoost / 100);
             target.status.defBoost = effect.durationTurns || 2;
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} defense rose!`);
+            this.log.setText(`${targetName}'s defense rose for ${target.status.defBoost} turns!`);
         }
         if (effect.atkDebuff) {
             target.atkMod *= (1 - effect.atkDebuff / 100);
             target.status.atkDebuff = effect.durationTurns || 2;
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} attack fell!`);
+            this.log.setText(`${targetName}'s attack dropped for ${target.status.atkDebuff} turns!`);
         }
         if (effect.reduceDefPct) {
             target.defMod *= (1 - effect.reduceDefPct / 100);
             target.status.defDebuff = effect.durationTurns || 2;
-            this.log.setText(`${target === this.playerData.displayName ? this.playerData.displayName : this.foeData.displayName} defense fell!`);
+            this.log.setText(`${targetName}'s defense dropped for ${target.status.defDebuff} turns!`);
         }
     }
 
-    tickStatuses(target) {
-        // apply DOT effects
+    tickStatuses(target, targetName) {
         if (target.status.bleed) {
             const bleedDmg = Math.round(target.maxHP * 0.05);
             target.hp = Math.max(0, target.hp - bleedDmg);
-            this.log.setText(`${target === this.playerState ? this.playerData.displayName : this.foeData.displayName} bleeds for ${bleedDmg} damage!`);
+            this.log.setText(`${targetName} suffers ${bleedDmg} bleeding damage! (${target.status.bleed} turns left)`);
             target.status.bleed--;
         }
-        if (target.status.sleep) target.status.sleep--;
-        if (target.status.stun) target.status.stun--;
-        if (target.status.skip) target.status.skip--;
-        if (target.status.confuse) target.status.confuse--;
-        if (target.status.atkBoost) target.status.atkBoost--;
-        if (target.status.defBoost) target.status.defBoost--;
-        if (target.status.atkDebuff) target.status.atkDebuff--;
-        if (target.status.defDebuff) target.status.defDebuff--;
+        ["sleep", "stun", "skip", "confuse", "atkBoost", "defBoost", "atkDebuff", "defDebuff"].forEach(s => {
+            if (target.status[s]) target.status[s]--;
+        });
     }
 
     // ===== TURN HANDLERS =====
@@ -1142,62 +1221,109 @@ class BattleScene extends Phaser.Scene {
         if (this.currentTurn !== 'player') return;
         const move = this.playerData.moves[idx];
 
-        if (!this.rollAccuracy(move)) {
-            this.log.setText(`${this.playerData.displayName}'s ${move.name} missed!`);
-        } else {
-            const dmg = this.applyDamage(this.playerState, this.foeState, move);
-            this.applyEffect(this.foeState, move.effect);
-            this.log.setText(`${this.playerData.displayName} used ${move.name}! ${dmg > 0 ? "It dealt " + dmg + "!" : ""}`);
-        }
+        if (this.playerState.status.sleep > 0) { this.log.setText(`${this.playerData.displayName} is asleep!`); return this.endTurn('foe'); }
+        if (this.playerState.status.stun > 0) { this.log.setText(`${this.playerData.displayName} is stunned!`); return this.endTurn('foe'); }
+        if (this.playerState.status.skip > 0) { this.log.setText(`${this.playerData.displayName} flinched!`); return this.endTurn('foe'); }
 
+        if (!this.rollAccuracy(move)) this.log.setText(`${this.playerData.displayName}'s ${move.name} missed!`);
+        else {
+            const dmg = this.applyDamage(this.playerState, this.foeState, move);
+            this.applyEffect(this.foeState, move.effect, this.playerData.displayName, this.foeData.displayName);
+            this.log.setText(`${this.playerData.displayName} used ${move.name}! ${dmg > 0 ? `It dealt ${dmg}!` : ""}`);
+        }
         this.updateHPBars();
         if (this.foeState.hp <= 0) return this.win();
-
-        this.currentTurn = 'foe';
-        this.time.delayedCall(1800, () => this.foeAction(), [], this);
+        this.endTurn('foe');
     }
 
     foeAction() {
         if (this.foeState.hp <= 0) return;
         const move = Phaser.Utils.Array.GetRandom(this.foeData.moves);
 
-        if (!this.rollAccuracy(move)) {
-            this.log.setText(`${this.foeData.displayName}'s ${move.name} missed!`);
-        } else {
-            const dmg = this.applyDamage(this.foeState, this.playerState, move);
-            this.applyEffect(this.playerState, move.effect);
-            this.log.setText(`${this.foeData.displayName} used ${move.name}! ${dmg > 0 ? "It dealt " + dmg + "!" : ""}`);
-        }
+        if (this.foeState.status.sleep > 0) { this.log.setText(`${this.foeData.displayName} is asleep!`); return this.endTurn('player'); }
+        if (this.foeState.status.stun > 0) { this.log.setText(`${this.foeData.displayName} is stunned!`); return this.endTurn('player'); }
+        if (this.foeState.status.skip > 0) { this.log.setText(`${this.foeData.displayName} flinched!`); return this.endTurn('player'); }
 
+        if (!this.rollAccuracy(move)) this.log.setText(`${this.foeData.displayName}'s ${move.name} missed!`);
+        else {
+            const dmg = this.applyDamage(this.foeState, this.playerState, move);
+            this.applyEffect(this.playerState, move.effect, this.foeData.displayName, this.playerData.displayName);
+            this.log.setText(`${this.foeData.displayName} used ${move.name}! ${dmg > 0 ? `It dealt ${dmg}!` : ""}`);
+        }
         this.updateHPBars();
         if (this.playerState.hp <= 0) return this.lose();
+        this.endTurn('player');
+    }
 
-        this.currentTurn = 'player';
+    endTurn(next) {
+        this.tickStatuses(this.playerState, this.playerData.displayName);
+        this.tickStatuses(this.foeState, this.foeData.displayName);
+        this.currentTurn = next;
+        if (next === 'foe') this.time.delayedCall(1800, () => this.foeAction(), [], this);
     }
 
     // ===== WIN / LOSE =====
     win() {
         this.log.setText(`${this.playerData.displayName} is victorious!`);
         this.time.delayedCall(2000, () => {
-            this.scene.stop('BattleScene');
-            this.scene.resume('OverworldScene');
-            this.game.audioManager.playMusic('overworld_theme', { volume: 0.5 });
+            let rewardText = null;
+            if (this.npcRef) {
+                this.npcRef.spent = true;
+                const npcDialogues = this.scene.get('OverworldScene').npcDialogues[this.npcRef.npcName];
+                if (npcDialogues) {
+                    for (let node of npcDialogues) {
+                        const rewardChoice = node.choices?.find(c => c.reward);
+                        if (rewardChoice) {
+                            this.scene.get('OverworldScene').inventory.push(rewardChoice.reward);
+                            this.scene.get('OverworldScene').updateInventoryHud();
+                            rewardText = `You seized ${rewardChoice.reward.replace(/_/g, " ")} from ${this.npcRef.npcName}!`;
+                            break;
+                        }
+                    }
+                }
+            }
+            // ✅ persist HP
+            const overworld = this.scene.get('OverworldScene');
+            overworld.player.hp = this.playerState.hp;
+            overworld.playerData.hp = this.playerState.hp;
+            if (rewardText) {
+                const prompt = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 100, 0x000000, 0.8).setOrigin(0.5).setDepth(9999);
+                const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, rewardText, {
+                    font: '16px monospace', color: '#fff',
+                    wordWrap: { width: 400, useAdvancedWrap: true },
+                    align: 'center'
+                }).setOrigin(0.5).setDepth(10000);
+                this.input.keyboard.once('keydown-SPACE', () => { prompt.destroy(); msg.destroy(); this.endBattle(); });
+            } else this.endBattle();
         });
     }
 
     lose() {
         this.log.setText(`You fainted...`);
         this.time.delayedCall(2000, () => {
-            this.scene.stop('BattleScene');
-            this.scene.resume('OverworldScene');
-            this.game.audioManager.playMusic('overworld_theme', { volume: 0.5 });
+            const prompt = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 460, 120, 0x000000, 0.85).setOrigin(0.5).setDepth(9999);
+            const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2,
+                "GAME OVER!\n\nYou failed the sacred wedding quest...\nPress [SPACE] to return to Title.", {
+                font: '16px monospace', color: '#fff',
+                wordWrap: { width: 440, useAdvancedWrap: true }, align: 'center'
+            }).setOrigin(0.5).setDepth(10000);
+            this.input.keyboard.once('keydown-SPACE', () => {
+                prompt.destroy(); msg.destroy();
+                this.scene.stop('BattleScene');
+                this.scene.stop('OverworldScene');
+                this.scene.start('TitleScene');
+            });
         });
     }
 
-    // ===== HP BAR UPDATE =====
-    updateHPBars(skipTween = false) {
-        const pRatio = this.playerState.hp / this.playerState.maxHP;
-        const fRatio = this.foeState.hp / this.foeState.maxHP;
+    endBattle() {
+        this.scene.stop('BattleScene');
+        this.scene.resume('OverworldScene');
+        this.game.audioManager.playMusic('overworld_theme', { volume: 0.5 });
+    }
+
+    updateHPBars() {
+        const pRatio = this.playerState.hp / this.playerState.maxHP, fRatio = this.foeState.hp / this.foeState.maxHP;
         this.playerHPFill.scaleX = Phaser.Math.Clamp(pRatio, 0, 1);
         this.foeHPFill.scaleX = Phaser.Math.Clamp(fRatio, 0, 1);
         this.playerHPFill.fillColor = (pRatio > 0.6) ? 0x44cc44 : (pRatio > 0.3 ? 0xffcc00 : 0xff4444);
