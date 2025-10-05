@@ -1,12 +1,4 @@
 { "compressionlevel":-1,
- "editorsettings":
-    {
-     "export":
-        {
-         "format":"json",
-         "target":"overworld.tmj"
-        }
-    },
  "height":35,
  "infinite":false,
  "layers":[

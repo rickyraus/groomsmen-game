@@ -105,6 +105,7 @@ class LoadingScene extends Phaser.Scene {
 
         // --- Core game assets ---
         this.load.image('overworld_tiles', 'assets/tilesets/Overworld.png');
+        this.load.image('objects_tiles', 'assets/tilesets/objects.png');
         this.load.image('battle_bg_grass', 'assets/backgrounds/battle_grass.png');
         this.load.tilemapTiledJSON('map', 'assets/tilemaps/overworld.json');
         this.load.json('npcDialogues', 'assets/data/npcDialogues.json');
@@ -114,11 +115,21 @@ class LoadingScene extends Phaser.Scene {
         this.load.audio('battle_theme', 'assets/audio/battle_theme.ogg');
         this.load.audio('menu_theme', 'assets/audio/menu_theme.ogg');
 
+        this.load.audio('slash_sfx', 'assets/sfx/slash.ogg');
+        this.load.audio('attack_sfx', 'assets/sfx/hit.ogg');
+        this.load.audio('heal_sfx', 'assets/sfx/heal.ogg');
+
         this.load.spritesheet('quest_items', 'assets/sprites/items.png', {
             frameWidth: 341, frameHeight: 1024
         });
 
         WebFont.load({ google: { families: ['Pixelify Sans', 'VT323'] } });
+
+        // generate a white diagonal slash texture at preload time:
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.lineStyle(6, 0xffffff);
+        g.beginPath(); g.moveTo(0, 32); g.lineTo(64, 0); g.strokePath();
+        g.generateTexture('fx_slash', 64, 32);
     }
 
     create() {
@@ -587,6 +598,10 @@ class OverworldScene extends Phaser.Scene {
         this.introShown = false;
         this.joyTouch = null;
 
+        this.bridezillaSpawned = false;
+        this.bridezillaTimer = null;
+        this.caveCoords = { x: 607, y: 113 }; // change as needed
+
         // Dialogue UI refs
         this.dialogBox = null;
         this.dialogText = null;
@@ -612,11 +627,19 @@ class OverworldScene extends Phaser.Scene {
 
         // ---- WORLD ----
         const map = this.make.tilemap({ key: 'map' });
-        const tileset = map.addTilesetImage('Overworld', 'overworld_tiles');
-        const belowLayer = map.createLayer('Below', tileset, 0, 0);
-        const worldLayer = map.createLayer('World', tileset, 0, 0);
-        const aboveLayer = map.createLayer('Above', tileset, 0, 0);
-        worldLayer.setCollisionByProperty({ collides: true });
+
+        // Names must match exactly how they appear in Tiled
+        const tileset1 = map.addTilesetImage('Overworld', 'overworld_tiles');
+        const tileset2 = map.addTilesetImage('objects', 'objects_tiles');
+
+        // Create layers in correct z-order
+        const belowLayer = map.createLayer('Below', [tileset1, tileset2], 0, 0);
+        const worldLayer = map.createLayer('World', [tileset1, tileset2], 0, 0);
+        const aboveLayer = map.createLayer('Above', [tileset1, tileset2], 0, 0);
+
+        // ✅ Enable collisions for both solid layers
+        worldLayer.setCollisionFromCollisionGroup(true);
+        aboveLayer.setCollisionFromCollisionGroup(true);
 
         // ---- CONTROLS ----
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -631,7 +654,18 @@ class OverworldScene extends Phaser.Scene {
         this.player.setScale(0.33).setCollideWorldBounds(true).play(this.playerData.id + '_idle_down');
         this.player.hp = this.playerData.hp;
         this.physics.add.collider(this.player, worldLayer);
-        this.player.body.setSize(this.player.width, this.player.height, true);
+        this.physics.add.collider(this.player, aboveLayer);
+
+        // ---- PLAYER BODY CALIBRATION ----
+        // Shrink the collision box to roughly match the sprite's "feet"
+        const bodyWidth = this.player.width * 0.35;   // ~one third of sprite width
+        const bodyHeight = this.player.height * 0.25; // shorter, only lower part collides
+        const offsetX = this.player.width * 0.32;     // centers horizontally
+        const offsetY = this.player.height * 0.68;    // shifts box toward feet
+
+        this.player.body.setSize(bodyWidth, bodyHeight);
+        this.player.body.setOffset(offsetX, offsetY);
+
 
         // ---- NPCs ----
         this.angryBridesmaid = this.physics.add.sprite(200, 200, 'angry_bridesmaid_idle', 4)
@@ -713,6 +747,17 @@ class OverworldScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-SPACE', () => {
             if (this.dialogueOpen) this.closeDialogue();
             else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
+            else if (this.readyForFinalBattle &&
+                Phaser.Math.Distance.Between(this.player.x, this.player.y, this.caveCoords.x, this.caveCoords.y) < 40) {
+                const foe = this.game.characters.find(c => c.id === 'bridezilla');
+                // Adjust stats based on items
+                if (this.inventory.includes('wedding_band')) foe.hp -= 30;
+                if (this.inventory.includes('something_blue')) this.playerData.hp += 30;
+                if (this.inventory.includes('wedding_veil')) foe.atkMod *= 0.8;
+
+                this.scene.launch('BattleScene', { player: this.playerData, foe });
+                this.scene.pause();
+            }
         });
 
         // Intro text
@@ -730,7 +775,7 @@ class OverworldScene extends Phaser.Scene {
         this.promptLabel.setText(`${actionKey} to ${npc.npcName}`);
         this.promptLabel.setVisible(true);
         this.updateNpcPromptPos();
-    }    
+    }
     clearNearbyNPC() {
         this.currentlyNearNPC = null;
         this.promptLabel.setVisible(false);
@@ -786,6 +831,86 @@ class OverworldScene extends Phaser.Scene {
 
         this.hud.setVisible(false);
         this.dialogueOpen = true;
+    }
+
+    //Spawn Bridezilla
+    // ===== SPAWN BRIDEZILLA =====
+    spawnBridezilla() {
+        if (this.bridezillaSpawned || this.readyForFinalBattle) return;
+        this.bridezillaSpawned = true;
+
+        const spawnX = Phaser.Math.Between(200, 600);
+        const spawnY = Phaser.Math.Between(200, 400);
+
+        this.bridezilla = this.physics.add.sprite(spawnX, spawnY, 'bridezilla_idle', 4)
+            .setScale(0.33)
+            .setImmovable(false)
+            .play('bridezilla_idle_down');
+
+        this.bridezilla.npcName = 'Bridezilla';
+
+        // ✅ overlap → instant battle
+        this.physics.add.overlap(this.player, this.bridezilla, () => {
+            this.scene.launch('BattleScene', {
+                player: this.playerData,
+                foe: this.game.characters.find(c => c.id === 'bridezilla'),
+                npc: this.bridezilla
+            });
+            this.scene.pause();
+        });
+
+        // --- Bridezilla anger lines ---
+        const rageLines = [
+            "When I catch him, he's toast!",
+            "You can’t run forever!",
+            "No one escapes MY wedding!",
+            "WHERE’S THE GROOM?!",
+            "I WILL have my vows fulfilled!",
+            "He’ll regret saying 'I do'!"
+        ];
+
+        // --- Faster + smarter wandering ---
+        this.time.addEvent({
+            delay: 2000,
+            loop: true,
+            callback: () => {
+                if (!this.bridezilla.active) return;
+
+                const distToPlayer = Phaser.Math.Distance.Between(
+                    this.bridezilla.x, this.bridezilla.y,
+                    this.player.x, this.player.y
+                );
+
+                const speed = (distToPlayer < 250) ? 80 : 60; // ✅ faster if player close
+                let vel = { x: 0, y: 0 };
+
+                // Random chase chance if player nearby
+                if (distToPlayer < 300 && Phaser.Math.Between(0, 100) < 40) {
+                    const angle = Phaser.Math.Angle.Between(
+                        this.bridezilla.x, this.bridezilla.y,
+                        this.player.x, this.player.y
+                    );
+                    vel = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+                } else {
+                    const dir = Phaser.Math.Between(0, 3);
+                    vel = [
+                        { x: -speed, y: 0 }, { x: speed, y: 0 },
+                        { x: 0, y: -speed }, { x: 0, y: speed }
+                    ][dir];
+                }
+
+                this.bridezilla.setVelocity(vel.x, vel.y);
+                this.time.delayedCall(1000, () => this.bridezilla.setVelocity(0, 0));
+
+                // Occasionally yell an angry line
+                if (Phaser.Math.Between(0, 100) < 25) {
+                    const line = Phaser.Utils.Array.GetRandom(rageLines);
+                    this.showAdhocBubble(this.bridezilla, line);
+                }
+            }
+        });
+
+        this.showAdhocBubble(this.player, "Bridezilla has awoken! Run for your life!");
     }
 
     showDialogueNode(node) {
@@ -914,18 +1039,26 @@ class OverworldScene extends Phaser.Scene {
             this.dialogText.setVisible(false);
             this.hud.setVisible(true);
             this.dialogueOpen = false;
+
+            // Start 5-minute countdown (300 000 ms)
+            this.time.delayedCall(300000, () => this.spawnBridezilla(), [], this);
+            this.timerLabel = this.add.text(20, 16, "Bridezilla Timer: 05:00", {
+                font: '14px monospace', fill: '#fff', backgroundColor: '#0008', padding: 4
+            }).setScrollFactor(0).setDepth(9999);
+            this.remainingTime = 300000;
+
         });
     }
 
     // ===== MOBILE CONTROLS =====
     createMobileControls() {
         this.input.addPointer(1);
-    
+
         this.joyBase = this.add.circle(80, GAME_HEIGHT - 80, 40, 0x000000, 0.3)
             .setScrollFactor(0).setDepth(2000);
         this.joyStick = this.add.circle(80, GAME_HEIGHT - 80, 20, 0xffffff, 0.6)
             .setScrollFactor(0).setDepth(2001);
-    
+
         // Track drag
         this.input.on('pointerdown', (p) => {
             if (Phaser.Math.Distance.Between(p.x, p.y, this.joyBase.x, this.joyBase.y) < 60) {
@@ -936,7 +1069,7 @@ class OverworldScene extends Phaser.Scene {
             if (this.joyTouch === p.id) {
                 const dx = p.x - this.joyBase.x;
                 const dy = p.y - this.joyBase.y;
-                const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 40);
+                const dist = Math.min(Math.sqrt(dx * dx + dy * dy), 40);
                 const angle = Math.atan2(dy, dx);
                 this.joyStick.setPosition(
                     this.joyBase.x + Math.cos(angle) * dist,
@@ -950,20 +1083,20 @@ class OverworldScene extends Phaser.Scene {
                 this.joyStick.setPosition(this.joyBase.x, this.joyBase.y);
             }
         });
-    
+
         this.actionBtn = this.add.circle(GAME_WIDTH - 80, GAME_HEIGHT - 80, 32, 0xFFD700)
             .setScrollFactor(0).setDepth(2000).setInteractive();
-    
+
         this.actionBtnText = this.add.text(this.actionBtn.x, this.actionBtn.y, 'A', {
             font: '20px monospace',
             color: '#000'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
-    
+
         this.actionBtn.on('pointerdown', () => {
             if (this.dialogueOpen) this.closeDialogue();
             else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
         });
-    }    
+    }
 
     // ===== INVENTORY =====
     updateInventoryHud() {
@@ -987,9 +1120,17 @@ class OverworldScene extends Phaser.Scene {
         if (this.inventory.includes('wedding_band') &&
             this.inventory.includes('something_blue') &&
             this.inventory.includes('wedding_veil')) {
-            this.scene.launch('BattleScene', { player: this.playerData, foe: this.game.characters.find(c => c.id === 'bridezilla') });
-            this.scene.pause();
+
+            // Stop countdown
+            if (this.timerLabel) this.timerLabel.setVisible(false);
+            if (this.bridezillaTimer) this.bridezillaTimer.remove(false);
+            this.remainingTime = 0;
+
+            this.showAdhocBubble(this.player,
+                "You sense Bridezilla awaits in her cave...\nFind her and return the lost items to end this madness!");
+            this.readyForFinalBattle = true;
         }
+
     }
 
     // ===== UPDATE LOOP =====
@@ -1036,6 +1177,23 @@ class OverworldScene extends Phaser.Scene {
         if (this.currentlyNearNPC) {
             const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.currentlyNearNPC.x, this.currentlyNearNPC.y);
             if (d > 64) this.clearNearbyNPC();
+        }
+
+        if (this.timerLabel && !this.bridezillaSpawned && this.remainingTime > 0) {
+            this.remainingTime -= this.game.loop.delta;
+            const minutes = Math.floor(this.remainingTime / 60000);
+            const seconds = Math.floor((this.remainingTime % 60000) / 1000);
+            this.timerLabel.setText(`Bridezilla Timer: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            if (this.remainingTime <= 0) this.spawnBridezilla();
+        }
+
+        if (this.readyForFinalBattle) {
+            const dToCave = Phaser.Math.Distance.Between(
+                this.player.x, this.player.y, this.caveCoords.x, this.caveCoords.y);
+            if (dToCave < 40 && !this.promptLabel.visible) {
+                this.promptLabel.setText('[SPACE] Enter the Bride’s Cave');
+                this.promptLabel.setVisible(true);
+            }
         }
 
         this.updateNpcPromptPos();
@@ -1144,11 +1302,54 @@ class BattleScene extends Phaser.Scene {
         });
 
         this.currentTurn = 'player';
-        this.updateHPBars(true);
+        this.updateHPBars();
     }
 
     // ====== HELPERS ======
     rollAccuracy(move) { return Phaser.Math.Between(1, 100) <= (move.accuracy || 100); }
+    // ===== VISUAL FEEDBACK =====
+    playAttackAnimation(attacker, defender, moveName) {
+        const cam = this.cameras.main;
+
+        // 🔊 Sound FX (optional — replace with your actual sound keys)
+        if (this.sound.get('attack_sfx')) this.sound.play('attack_sfx', { volume: 0.4 });
+        else this.sound.play('slash_sfx', { volume: 0.4, detune: Phaser.Math.Between(-100, 100) });
+
+        // 💥 Screen shake when physical attacks land
+        cam.shake(120, 0.0035);
+
+        // 💨 Simple lunge effect
+        this.tweens.add({
+            targets: attacker,
+            x: attacker.x + (attacker === this.playerSprite ? 30 : -30),
+            duration: 80,
+            yoyo: true,
+            ease: 'Quad.easeOut'
+        });
+
+        // 💢 Red flash on defender
+        this.tweens.addCounter({
+            from: 255, to: 0, duration: 160,
+            onUpdate: tween => {
+                const val = Math.floor(tween.getValue());
+                defender.setTintFill(Phaser.Display.Color.GetColor(255, val, val));
+            },
+            onComplete: () => defender.clearTint()
+        });
+
+        // ✂️ Slash overlay
+        const slash = this.add.image(defender.x, defender.y - 10, 'fx_slash')
+            .setScale(0.6).setAlpha(0).setDepth(999);
+        this.tweens.add({
+            targets: slash,
+            alpha: { from: 0, to: 1 },
+            scale: { from: 0.3, to: 0.8 },
+            angle: { from: -25, to: 10 },
+            duration: 150,
+            yoyo: true,
+            onComplete: () => slash.destroy()
+        });
+    }
     applyDamage(attacker, defender, move) {
         let dmg = (move.power || 0) * (attacker.atkMod || 1) * (1 / (defender.defMod || 1));
         defender.hp = Math.max(0, defender.hp - dmg);
@@ -1227,6 +1428,7 @@ class BattleScene extends Phaser.Scene {
 
         if (!this.rollAccuracy(move)) this.log.setText(`${this.playerData.displayName}'s ${move.name} missed!`);
         else {
+            this.playAttackAnimation(this.playerSprite, this.foeSprite, move.name);
             const dmg = this.applyDamage(this.playerState, this.foeState, move);
             this.applyEffect(this.foeState, move.effect, this.playerData.displayName, this.foeData.displayName);
             this.log.setText(`${this.playerData.displayName} used ${move.name}! ${dmg > 0 ? `It dealt ${dmg}!` : ""}`);
@@ -1246,6 +1448,7 @@ class BattleScene extends Phaser.Scene {
 
         if (!this.rollAccuracy(move)) this.log.setText(`${this.foeData.displayName}'s ${move.name} missed!`);
         else {
+            this.playAttackAnimation(this.foeSprite, this.playerSprite, move.name);
             const dmg = this.applyDamage(this.foeState, this.playerState, move);
             this.applyEffect(this.playerState, move.effect, this.foeData.displayName, this.playerData.displayName);
             this.log.setText(`${this.foeData.displayName} used ${move.name}! ${dmg > 0 ? `It dealt ${dmg}!` : ""}`);
@@ -1263,38 +1466,77 @@ class BattleScene extends Phaser.Scene {
     }
 
     // ===== WIN / LOSE =====
+    // ===== WIN / LOSE =====
     win() {
         this.log.setText(`${this.playerData.displayName} is victorious!`);
+
         this.time.delayedCall(2000, () => {
             let rewardText = null;
-            if (this.npcRef) {
+            const overworld = this.scene.get('OverworldScene');
+
+            // --- 1️⃣ Handle normal NPC victories ---
+            if (this.npcRef && this.foeData.id !== 'bridezilla') {
                 this.npcRef.spent = true;
-                const npcDialogues = this.scene.get('OverworldScene').npcDialogues[this.npcRef.npcName];
+
+                const npcDialogues = overworld?.npcDialogues?.[this.npcRef.npcName];
                 if (npcDialogues) {
                     for (let node of npcDialogues) {
                         const rewardChoice = node.choices?.find(c => c.reward);
                         if (rewardChoice) {
-                            this.scene.get('OverworldScene').inventory.push(rewardChoice.reward);
-                            this.scene.get('OverworldScene').updateInventoryHud();
+                            overworld.inventory.push(rewardChoice.reward);
+                            overworld.updateInventoryHud();
                             rewardText = `You seized ${rewardChoice.reward.replace(/_/g, " ")} from ${this.npcRef.npcName}!`;
                             break;
                         }
                     }
                 }
             }
-            // ✅ persist HP
-            const overworld = this.scene.get('OverworldScene');
-            overworld.player.hp = this.playerState.hp;
-            overworld.playerData.hp = this.playerState.hp;
+
+            // --- 2️⃣ Persist player HP back to overworld ---
+            if (overworld) {
+                overworld.player.hp = this.playerState.hp;
+                overworld.playerData.hp = this.playerState.hp;
+            }
+
+            // --- 3️⃣ Handle Bridezilla special case (final boss) ---
+            if (this.foeData.id === 'bridezilla') {
+                this.time.delayedCall(2500, () => {
+                    this.scene.stop('BattleScene');
+                    this.scene.stop('OverworldScene');
+                    this.scene.start('CreditsScene', { playerId: this.playerData.id });
+                });
+                return; // stop further handling
+            }
+
+            // --- 4️⃣ Normal victory reward prompt ---
             if (rewardText) {
-                const prompt = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 100, 0x000000, 0.8).setOrigin(0.5).setDepth(9999);
+                const boxW = isMobile ? 480 : 420;
+                const boxH = 110;
+                const prompt = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, boxW, boxH, 0x000000, 0.85)
+                    .setOrigin(0.5).setDepth(9999);
                 const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, rewardText, {
-                    font: '16px monospace', color: '#fff',
-                    wordWrap: { width: 400, useAdvancedWrap: true },
+                    font: isMobile ? '18px VT323' : '16px monospace',
+                    color: '#fff',
+                    wordWrap: { width: boxW - 40, useAdvancedWrap: true },
                     align: 'center'
                 }).setOrigin(0.5).setDepth(10000);
-                this.input.keyboard.once('keydown-SPACE', () => { prompt.destroy(); msg.destroy(); this.endBattle(); });
-            } else this.endBattle();
+
+                const promptText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + boxH / 2 - 20,
+                    isMobile ? '👉 Tap to continue' : 'Press [SPACE] to continue',
+                    { font: '14px VT323', color: '#FFD700' }
+                ).setOrigin(0.5).setDepth(10000);
+
+                const cleanup = () => {
+                    prompt.destroy(); msg.destroy(); promptText.destroy();
+                    this.endBattle();
+                };
+
+                // both keyboard and tap support
+                this.input.keyboard.once('keydown-SPACE', cleanup);
+                this.input.once('pointerdown', cleanup);
+            } else {
+                this.endBattle();
+            }
         });
     }
 
@@ -1323,11 +1565,46 @@ class BattleScene extends Phaser.Scene {
     }
 
     updateHPBars() {
-        const pRatio = this.playerState.hp / this.playerState.maxHP, fRatio = this.foeState.hp / this.foeState.maxHP;
+        const pRatio = this.playerState.hp / this.playerState.maxHP;
+        const fRatio = this.foeState.hp / this.foeState.maxHP;
+
         this.playerHPFill.scaleX = Phaser.Math.Clamp(pRatio, 0, 1);
         this.foeHPFill.scaleX = Phaser.Math.Clamp(fRatio, 0, 1);
-        this.playerHPFill.fillColor = (pRatio > 0.6) ? 0x44cc44 : (pRatio > 0.3 ? 0xffcc00 : 0xff4444);
-        this.foeHPFill.fillColor = (fRatio > 0.6) ? 0x44cc44 : (fRatio > 0.3 ? 0xffcc00 : 0xff4444);
+
+        this.playerHPFill.fillColor =
+            (pRatio > 0.6) ? 0x44cc44 : (pRatio > 0.3 ? 0xffcc00 : 0xff4444);
+        this.foeHPFill.fillColor =
+            (fRatio > 0.6) ? 0x44cc44 : (fRatio > 0.3 ? 0xffcc00 : 0xff4444);
+    }
+}
+
+class CreditsScene extends Phaser.Scene {
+    constructor() { super('CreditsScene'); }
+
+    init(data) { this.playerId = data.playerId; }
+
+    create() {
+        const msg = this.playerId === 'boet'
+            ? "You defeated Bridezilla!\n\nRick asks...\nWill you be his BEST MAN?"
+            : "You defeated Bridezilla!\n\nRick asks...\nWill you be one of his groomsmen?";
+
+        this.add.image(0, 0, 'battle_bg_grass').setOrigin(0).setAlpha(0.4);
+        const text = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT + 40, msg + "\n\n— LEGEND OF THE BEST MEN —", {
+            font: '20px VT323', color: '#fff', align: 'center', wordWrap: { width: 600 }
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: text,
+            y: -text.height,
+            duration: 18000,
+            ease: 'Linear',
+            onComplete: () => {
+                this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "Press [SPACE] to Return", {
+                    font: '16px VT323', color: '#FFD700'
+                }).setOrigin(0.5);
+                this.input.keyboard.once('keydown-SPACE', () => this.scene.start('TitleScene'));
+            }
+        });
     }
 }
 
@@ -1346,7 +1623,7 @@ const config = {
     parent: 'game-container',
     backgroundColor: '#222',
     physics: { default: 'arcade', arcade: { debug: false } },
-    scene: [LoadingScene, BootScene, TitleScene, CharacterSelectScene, OverworldScene, BattleScene]
+    scene: [LoadingScene, BootScene, TitleScene, CharacterSelectScene, OverworldScene, BattleScene, CreditsScene]
 };
 
 const game = new Phaser.Game(config);
