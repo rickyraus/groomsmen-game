@@ -107,6 +107,7 @@ class LoadingScene extends Phaser.Scene {
         this.load.image('overworld_tiles', 'assets/tilesets/Overworld.png');
         this.load.image('objects_tiles', 'assets/tilesets/objects.png');
         this.load.image('battle_bg_grass', 'assets/backgrounds/battle_grass.png');
+        this.load.image('credits_win', 'assets/backgrounds/credits_win.png');
         this.load.tilemapTiledJSON('map', 'assets/tilemaps/overworld.json');
         this.load.json('npcDialogues', 'assets/data/npcDialogues.json');
         this.load.json('characters', 'assets/data/characters.json');
@@ -122,6 +123,15 @@ class LoadingScene extends Phaser.Scene {
         this.load.spritesheet('quest_items', 'assets/sprites/items.png', {
             frameWidth: 341, frameHeight: 1024
         });
+
+        for (let i = 1; i <= 4; i++) {
+            this.load.spritesheet(`guest${i}_idle`, `assets/sprites/wedding_guest/guest${i}/idle.png`, {
+                frameWidth: 64, frameHeight: 64
+            });
+            this.load.spritesheet(`guest${i}_walk`, `assets/sprites/wedding_guest/guest${i}/walk.png`, {
+                frameWidth: 64, frameHeight: 64
+            });
+        }
 
         WebFont.load({ google: { families: ['Pixelify Sans', 'VT323'] } });
 
@@ -179,13 +189,16 @@ class BootScene extends Phaser.Scene {
 
         // --- Placeholder textures for all characters
         this.characters.forEach(ch => {
-            const g = this.add.graphics();
-            g.fillStyle(ch.color || 0xffffff, 1);
-            g.fillRoundedRect(0, 0, 48, 48, 6);
-            g.lineStyle(2, 0x000000, 1);
-            g.strokeRoundedRect(0, 0, 48, 48, 6);
-            g.generateTexture('char_' + ch.id, 48, 48);
-            g.destroy();
+            // ❌ Only generate a placeholder if this character has *no sprite sheet*
+            if (!ch.sprites?.idle && !ch.sprites?.walk) {
+                const g = this.add.graphics();
+                g.fillStyle(ch.color || 0xffffff, 1);
+                g.fillRoundedRect(0, 0, 48, 48, 6);
+                g.lineStyle(2, 0x000000, 1);
+                g.strokeRoundedRect(0, 0, 48, 48, 6);
+                g.generateTexture('char_' + ch.id, 48, 48);
+                g.destroy();
+            }
         });
 
         const g2 = this.add.graphics();
@@ -242,6 +255,52 @@ class BootScene extends Phaser.Scene {
                 });
             }
         });
+
+        for (let i = 1; i <= 4; i++) {
+            // --- Idle animations (1 col x 4 rows = 4 frames total) ---
+            this.anims.create({
+                key: `guest${i}_idle_down`,
+                frames: [{ key: `guest${i}_idle`, frame: 2 }], // pick whichever frame faces down
+                frameRate: 1, repeat: -1
+            });
+            this.anims.create({
+                key: `guest${i}_idle_up`,
+                frames: [{ key: `guest${i}_idle`, frame: 0 }],
+                frameRate: 1, repeat: -1
+            });
+            this.anims.create({
+                key: `guest${i}_idle_left`,
+                frames: [{ key: `guest${i}_idle`, frame: 1 }],
+                frameRate: 1, repeat: -1
+            });
+            this.anims.create({
+                key: `guest${i}_idle_right`,
+                frames: [{ key: `guest${i}_idle`, frame: 3 }],
+                frameRate: 1, repeat: -1
+            });
+
+            // --- Walk animations (8 cols x 4 rows = 32 frames total) ---
+            this.anims.create({
+                key: `guest${i}_walk_up`,
+                frames: this.anims.generateFrameNumbers(`guest${i}_walk`, { start: 0, end: 7 }),
+                frameRate: 10, repeat: -1
+            });
+            this.anims.create({
+                key: `guest${i}_walk_left`,
+                frames: this.anims.generateFrameNumbers(`guest${i}_walk`, { start: 8, end: 15 }),
+                frameRate: 10, repeat: -1
+            });
+            this.anims.create({
+                key: `guest${i}_walk_down`,
+                frames: this.anims.generateFrameNumbers(`guest${i}_walk`, { start: 16, end: 23 }),
+                frameRate: 10, repeat: -1
+            });
+            this.anims.create({
+                key: `guest${i}_walk_right`,
+                frames: this.anims.generateFrameNumbers(`guest${i}_walk`, { start: 24, end: 31 }),
+                frameRate: 10, repeat: -1
+            });
+        }
 
         this.scene.start('TitleScene');
     }
@@ -637,6 +696,7 @@ class OverworldScene extends Phaser.Scene {
         const worldLayer = map.createLayer('World', [tileset1, tileset2], 0, 0);
         const aboveLayer = map.createLayer('Above', [tileset1, tileset2], 0, 0);
 
+
         // ✅ Enable collisions for both solid layers
         worldLayer.setCollisionFromCollisionGroup(true);
         aboveLayer.setCollisionFromCollisionGroup(true);
@@ -655,6 +715,12 @@ class OverworldScene extends Phaser.Scene {
         this.player.hp = this.playerData.hp;
         this.physics.add.collider(this.player, worldLayer);
         this.physics.add.collider(this.player, aboveLayer);
+        if (worldLayer && this.player && this.guests) {
+            this.physics.add.collider(this.guests, aboveLayer);
+            this.physics.add.collider(this.guests, this.player);
+            this.physics.add.collider(this.guests, this.guests);
+        }
+
 
         // ---- PLAYER BODY CALIBRATION ----
         // Shrink the collision box to roughly match the sprite's "feet"
@@ -683,6 +749,79 @@ class OverworldScene extends Phaser.Scene {
         this.priest.npcName = 'Priest';
         this.drunkUncle.npcName = 'Drunk Uncle';
 
+        // --- Guests group (Physics-safe) ---
+        this.guests = this.physics.add.group({
+            immovable: false,
+            collideWorldBounds: true
+        });
+
+        for (let i = 1; i <= 4; i++) {
+            const x = Phaser.Math.Between(150, 650);
+            const y = Phaser.Math.Between(150, 450);
+
+            const guest = this.guests.create(x, y, `guest${i}_idle`)
+                .setScale(0.33)
+                .setBounce(0.2)
+                .setDrag(50, 50)
+                .play(`guest${i}_idle_down`);
+
+            guest.npcName = `Guest ${i}`;
+            guest.spent = false;
+
+            // overlap detection for prompt
+            this.physics.add.overlap(this.player, guest, () => this.setNearbyNPC(guest), null, this);
+        }
+
+        // --- Guest movement ---
+        // --- Guest movement ---
+        this.time.addEvent({
+            delay: 3000,
+            loop: true,
+            callback: () => {
+                this.guests.getChildren().forEach(g => {
+                    if (!g || !g.active) return;
+
+                    // 40% chance each tick to wander
+                    if (Phaser.Math.Between(0, 100) < 40) {
+                        const dir = Phaser.Math.Between(0, 3);
+                        const speed = 30;
+                        const moveDur = 1000;
+
+                        const base = g.texture.key.replace('_idle', '').replace('_walk', '');
+                        let vx = 0, vy = 0;
+
+                        if (dir === 0) { vy = -speed; g.play(`${base}_walk_up`, true); }
+                        else if (dir === 1) { vy = speed; g.play(`${base}_walk_down`, true); }
+                        else if (dir === 2) { vx = -speed; g.play(`${base}_walk_left`, true); }
+                        else { vx = speed; g.play(`${base}_walk_right`, true); }
+
+                        g.setVelocity(vx, vy);
+
+                        this.time.delayedCall(moveDur, () => {
+                            // If they hit a wall or another guest, stop immediately
+                            if (!g.body.blocked.none) g.setVelocity(0, 0);
+
+                            // End of movement – switch to matching idle pose
+                            const facing =
+                                dir === 0 ? 'up' :
+                                    dir === 1 ? 'down' :
+                                        dir === 2 ? 'left' : 'right';
+
+                            g.setVelocity(0, 0);
+                            g.play(`${base}_idle_${facing}`, true);
+                        });
+                    } else {
+                        // Occasionally stop walking if velocity remains
+                        if (g.body && (g.body.velocity.x !== 0 || g.body.velocity.y !== 0)) {
+                            g.setVelocity(0, 0);
+                            const base = g.texture.key.replace('_idle', '').replace('_walk', '');
+                            g.play(`${base}_idle_down`, true);
+                        }
+                    }
+                });
+            }
+        });
+
         // ---- CAMERA ----
         const mainCam = this.cameras.main;
         this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -696,7 +835,7 @@ class OverworldScene extends Phaser.Scene {
         this.uiCam = this.cameras.add(0, 0, GAME_WIDTH, GAME_HEIGHT, false);
         this.uiCam.setZoom(1);
         this.uiCam.setScroll(0, 0);
-        this.uiCam.ignore([belowLayer, worldLayer, aboveLayer, this.player, this.angryBridesmaid, this.priest, this.drunkUncle]);
+        this.uiCam.ignore(this.children.list.filter(o => o !== this.uiRoot));
 
         // ---- HUD ----
         this.hud = this.add.text(GAME_WIDTH - 200, 16,
@@ -772,7 +911,8 @@ class OverworldScene extends Phaser.Scene {
         if (npc.spent) return;
         this.currentlyNearNPC = npc;
         const actionKey = isMobile ? '[A] Tap' : '[SPACE] Talk';
-        this.promptLabel.setText(`${actionKey} to ${npc.npcName}`);
+        const labelName = npc.npcName.startsWith("Guest") ? "Guest" : npc.npcName;
+        this.promptLabel.setText(`${actionKey} to ${labelName}`);
         this.promptLabel.setVisible(true);
         this.updateNpcPromptPos();
     }
@@ -799,6 +939,20 @@ class OverworldScene extends Phaser.Scene {
         if (npc.spent) {
             const randomLine = Phaser.Utils.Array.GetRandom(this.dismissiveLines);
             this.showAdhocBubble(npc, randomLine);
+            return;
+        }
+
+        if (npc.npcName.startsWith("Guest")) {
+            const nonsenseLines = [
+                "Did you know the cake has a secret layer?",
+                "I’m just here for the open bar, mate.",
+                "Someone said the bouquet is rigged.",
+                "This tie? Found it in the punch bowl.",
+                "I think the priest’s been hitting the champagne.",
+                "I lost my shoes but found enlightenment."
+            ];
+            const line = Phaser.Utils.Array.GetRandom(nonsenseLines);
+            this.showAdhocBubble(npc, line);
             return;
         }
 
@@ -1040,12 +1194,21 @@ class OverworldScene extends Phaser.Scene {
             this.hud.setVisible(true);
             this.dialogueOpen = false;
 
-            // Start 5-minute countdown (300 000 ms)
+            // --- Start 5-minute countdown (300 000 ms) ---
             this.time.delayedCall(300000, () => this.spawnBridezilla(), [], this);
-            this.timerLabel = this.add.text(20, 16, "Bridezilla Timer: 05:00", {
-                font: '14px monospace', fill: '#fff', backgroundColor: '#0008', padding: 4
-            }).setScrollFactor(0).setDepth(9999);
             this.remainingTime = 300000;
+
+            // --- Timer label (bottom-left, slightly inward for mobile UX) ---
+            this.timerLabel = this.add.text(GAME_WIDTH * 0.1, GAME_HEIGHT - 20, "Bridezilla Timer: 05:00", {
+                font: '14px monospace',
+                fill: '#fff',
+                backgroundColor: '#0008',
+                padding: { x: 8, y: 4 },
+                align: 'center',
+            })
+                .setScrollFactor(0)     // stays fixed to camera
+                .setDepth(9999)
+                .setOrigin(0, 1);        // anchor bottom-left corner
 
         });
     }
@@ -1588,7 +1751,7 @@ class CreditsScene extends Phaser.Scene {
             ? "You defeated Bridezilla!\n\nRick asks...\nWill you be his BEST MAN?"
             : "You defeated Bridezilla!\n\nRick asks...\nWill you be one of his groomsmen?";
 
-        this.add.image(0, 0, 'battle_bg_grass').setOrigin(0).setAlpha(0.4);
+        this.add.image(0, 0, 'credits_win').setOrigin(0).setAlpha(0.4);
         const text = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT + 40, msg + "\n\n— LEGEND OF THE BEST MEN —", {
             font: '20px VT323', color: '#fff', align: 'center', wordWrap: { width: 600 }
         }).setOrigin(0.5);

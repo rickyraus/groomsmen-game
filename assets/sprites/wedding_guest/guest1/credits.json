@@ -1,0 +1,206 @@
+{
+  "colors": {
+    "name": "Liberated Palette",
+    "authors": [
+      "Eliza Wyatt (DeathsDarling)"
+    ],
+    "urls": [
+      "https://github.com/ElizaWy/LPC/wiki/Style-Guide#color-palette"
+    ],
+    "licenses": [
+      "OGA-BY 3.0"
+    ],
+    "notes": [
+      "Original palette made for the LPC set, by Eliza Wyatt."
+    ]
+  },
+  "anatomy.body.female": {
+    "notes": [
+      "see details at https://opengameart.org/content/lpc-character-bases",
+      "2023-12 [napsio]: minimized colors to 6 for each material and fixed broken colors"
+    ],
+    "authors": [
+      "napsio",
+      "Benjamin K. Smith (BenCreating)",
+      "bluecarrot16",
+      "TheraHedwig",
+      "Evert",
+      "MuffinElZangano",
+      "Durrani",
+      "Pierre Vigier (pvigier)",
+      "ElizaWy",
+      "Matthew Krohn (makrohn)",
+      "Johannes Sjölund (wulax)",
+      "Stephen Challener (Redshrike)"
+    ],
+    "licenses": [
+      "OGA-BY 3.0",
+      "CC-BY-SA 3.0",
+      "GPL 3.0"
+    ],
+    "urls": [
+      "https://opengameart.org/content/lpc-jump-expanded",
+      "https://opengameart.org/content/lpc-revised-character-basics",
+      "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+      "https://opengameart.org/content/lpc-ladies",
+      "https://opengameart.org/content/lpc-be-seated",
+      "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+      "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+      "https://opengameart.org/content/lpc-character-bases",
+      "https://gitlab.com/vagabondgame/lpc-characters",
+      "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+      "https://opengameart.org/content/lpc-7-womens-shirts",
+      "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle"
+    ],
+    "name": "Female"
+  },
+  "anatomy.head.human_female": {
+    "notes": [
+      "original head by Redshrike",
+      "tweaks by BenCreating",
+      "modular version by bluecarrot16",
+      "2023-12 [napsio]: minimized colors to 6 for each material and fixed broken colors"
+    ],
+    "authors": [
+      "napsio",
+      "bluecarrot16",
+      "Benjamin K. Smith (BenCreating)",
+      "Stephen Challener (Redshrike)"
+    ],
+    "licenses": [
+      "OGA-BY 3.0",
+      "CC-BY-SA 3.0",
+      "GPL 3.0"
+    ],
+    "urls": [
+      "https://opengameart.org/content/",
+      "https://opengameart.org/content/lpc-character-bases"
+    ],
+    "name": "Human Female"
+  },
+  "anatomy.nose.button": {
+    "notes": [
+      "2023-12 [napsio]: minimized colors to 6 for each material and fixed broken colors"
+    ],
+    "authors": [
+      "napsio",
+      "Thane Brimhall (pennomi)",
+      "Matthew Krohn (makrohn)"
+    ],
+    "licenses": [
+      "GPL 3.0",
+      "CC-BY-SA 3.0"
+    ],
+    "urls": [
+      "https://opengameart.org/content/lpc-base-character-expressions"
+    ],
+    "name": "Button"
+  },
+  "anatomy.hair.bob": {
+    "notes": [
+      "2023-12 [napsio]: minimized colors to 6 for each material and fixed broken colors"
+    ],
+    "authors": [
+      "napsio",
+      "bluecarrot16"
+    ],
+    "licenses": [
+      "CC0"
+    ],
+    "urls": [
+      "https://opengameart.org/content/lpc-hair"
+    ],
+    "name": "Bob"
+  },
+  "clothes.dress.bodice": {
+    "notes": [
+      "original princess.xcf by Sharm",
+      "extended to all poses by makrohn",
+      " edited to v3 bases and animation cleanup by bluecarrot16",
+      "2023-12 [napsio]: minimized colors to 6 for each material and fixed broken colors"
+    ],
+    "authors": [
+      "napsio",
+      "bluecarrot16",
+      "Matthew Krohn (makrohn)",
+      "Lanea Zimmerman (Sharm)"
+    ],
+    "licenses": [
+      "CC-BY-SA 3.0",
+      "GPL 3.0"
+    ],
+    "urls": [
+      "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+      "http://opengameart.org/content/lpc-clothing-updates",
+      "https://opengameart.org/content/lpc-dress-in-combat-poses"
+    ],
+    "name": "Bodice"
+  },
+  "clothes.legs.leggings": {
+    "notes": [
+      "adapted from sara's leggings to v3 bases by bluecarrot16",
+      "2023-12 [napsio]: minimized colors to 6 for each material and fixed broken colors"
+    ],
+    "authors": [
+      "napsio",
+      "bluecarrot16",
+      "Mandi Paugh",
+      "Stephen Challener (Redshrike)",
+      "William.Thompsonj"
+    ],
+    "licenses": [
+      "OGA-BY 3.0"
+    ],
+    "urls": [
+      "http://opengameart.org/content/sara-wizard",
+      "https://opengameart.org/content/lpc-sara"
+    ],
+    "name": "Leggings"
+  },
+  "clothes.skirts.overskirt": {
+    "notes": [
+      "original princess.xcf by Sharm",
+      "extended to all poses by makrohn",
+      "edited to v3 bases and animation cleanup by bluecarrot16",
+      "2023-12 [napsio]: minimized colors to 6 for each material and fixed broken colors"
+    ],
+    "authors": [
+      "napsio",
+      "bluecarrot16",
+      "Matthew Krohn (makrohn)",
+      "Lanea Zimmerman (Sharm)"
+    ],
+    "licenses": [
+      "CC-BY-SA 3.0",
+      "GPL 3.0"
+    ],
+    "urls": [
+      "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+      "http://opengameart.org/content/lpc-clothing-updates",
+      "https://opengameart.org/content/lpc-dress-in-combat-poses"
+    ],
+    "name": "Overskirt"
+  },
+  "clothes.feet.shoes": {
+    "notes": [
+      "original by wulax",
+      "edited for female base by Joe White",
+      "edited for v3 base by bluecarrot16",
+      "2023-12 [napsio]: minimized colors to 6 for each material and fixed broken colors"
+    ],
+    "authors": [
+      "napsio",
+      "Joe White",
+      "Johannes Sjölund (wulax)"
+    ],
+    "licenses": [
+      "CC-BY-SA 3.0",
+      "GPL 3.0"
+    ],
+    "urls": [
+      "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+      "http://opengameart.org/content/lpc-clothing-updates"
+    ],
+    "name": "Shoes"
+  }
+}

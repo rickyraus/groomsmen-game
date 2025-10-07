@@ -1,4 +1,4 @@
-body/bodies/male/taupe.png
+body/bodies/male/light.png
 	- Note: see details at https://opengameart.org/content/lpc-character-bases; 'Thick' Male Revised Run/Climb by JaidynReiman (based on ElizaWy's LPC Revised)
 	- Licenses:
 		- OGA-BY 3.0
@@ -26,46 +26,50 @@ body/bodies/male/taupe.png
 		- https://opengameart.org/content/lpc-jump-expanded
 		- https://opengameart.org/content/lpc-character-bases
 
-body/tail/fluffy/adult/fg/sandy.png
-	- Note: 
-	- Licenses:
-		- OGA-BY 3.0+
-		- CC-BY 3.0+
-		- GPL 3.0
-	- Authors:
-		- JaidynReiman
-	- Links:
-		- https://opengameart.org/content/lpc-furry-ears-tails-for-rpg-sprites
-
-body/tail/fluffy/adult/bg/sandy.png
-	- Note: 
-	- Licenses:
-		- OGA-BY 3.0+
-		- CC-BY 3.0+
-		- GPL 3.0
-	- Authors:
-		- JaidynReiman
-	- Links:
-		- https://opengameart.org/content/lpc-furry-ears-tails-for-rpg-sprites
-
-head/heads/wolf/male/taupe.png
-	- Note: original wolf animation by Redshrike, commissioned by William.Thompsonj; wolfman sprite by BenCreating, commissioned by castelonia; tweaks and headless version by bluecarrot16
+head/heads/human/male_plump/light.png
+	- Note: original head by Redshrike, plump version by ??
 	- Licenses:
 		- CC-BY-SA 3.0
 		- GPL 3.0
 	- Authors:
-		- bluecarrot16
-		- Sander Frenken (castelonia)
-		- Benjamin K. Smith (BenCreating)
-		- William.Thompsonj
 		- Stephen Challener (Redshrike)
+		- ??
 	- Links:
 		- https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
-		- https://opengameart.org/content/lpc-wolf-animation
-		- https://opengameart.org/content/lpc-wolfman
-		- https://opengameart.org/content/lpc-character-bases
+		- https://opengameart.org/content/lpc-folk
 
-hat/formal/tophat/adult/black.png
+head/nose/straight/adult/light.png
+	- Note: 
+	- Licenses:
+		- GPL 3.0
+		- CC-BY-SA 3.0
+	- Authors:
+		- Thane Brimhall (pennomi)
+		- laetissima
+		- Matthew Krohn (makrohn)
+	- Links:
+		- https://opengameart.org/content/lpc-base-character-expressions
+
+eyes/eyebrows/thin/adult/ash.png
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- ElizaWy
+	- Links:
+		- https://github.com/ElizaWy/LPC/tree/main/Characters/Hair
+		- https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+
+hair/balding/adult/sandy.png
+	- Note: 
+	- Licenses:
+		- OGA-BY 3.0
+	- Authors:
+		- ElizaWy
+	- Links:
+		- https://opengameart.org/content/lpc-hair
+
+hat/formal/bowler/adult/base.png
 	- Note: 
 	- Licenses:
 		- CC-BY-SA 3.0
@@ -76,7 +80,7 @@ hat/formal/tophat/adult/black.png
 		- https://opengameart.org/content/lpc-gentleman
 		- https://opengameart.org/content/lpc-expanded-hats-facial-helmets
 
-facial/monocle/left/adult/iron.png
+facial/monocle/left/adult/gold.png
 	- Note: 
 	- Licenses:
 		- CC-BY-SA 3.0
@@ -90,14 +94,14 @@ facial/monocle/left/adult/iron.png
 		- https://opengameart.org/content/lpc-gentleman
 		- https://opengameart.org/content/lpc-expanded-hats-facial-helmets
 
-arms/hands/ring/stud/male/yellow.png
+wrists/cuffs/male/white.png
 	- Note: 
 	- Licenses:
-		- CC0
+		- OGA-BY 3.0
 	- Authors:
 		- bluecarrot16
 	- Links:
-		- https://opengameart.org/content/lpc-jewelry
+		- https://opengameart.org/content/lpc-pirates
 
 torso/clothes/longsleeve/formal/male/white.png
 	- Note: 
@@ -126,7 +130,7 @@ torso/jacket/collared/male/black.png
 		- https://opengameart.org/content/lpc-gentleman
 		- https://opengameart.org/content/lpc-pirates
 
-legs/formal_striped/male/black.png
+legs/formal_striped/male/base.png
 	- Note: Original pants by Stephen Challener (Redshrike), thrust/shoot bases by Wulax, Striped Formal Pants by Bluecarrot16, climb/jump/run/sit/emotes/revised combat by JaidynReiman
 	- Licenses:
 		- OGA-BY 3.0
@@ -144,4 +148,19 @@ legs/formal_striped/male/black.png
 		- https://opengameart.org/content/lpc-2-characters
 		- https://opengameart.org/content/lpc-gentleman
 		- https://opengameart.org/content/lpc-expanded-pants
+
+feet/shoes/basic/male/black.png
+	- Note: original by wulax, edited for v3 base by bluecarrot16, Jump/Sit/Emote/Run/Revised Combat by JaidynReiman
+	- Licenses:
+		- OGA-BY 3.0
+		- CC-BY-SA 3.0
+		- GPL 3.0
+	- Authors:
+		- JaidynReiman
+		- bluecarrot16
+		- Johannes Sjölund (wulax)
+	- Links:
+		- https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+		- http://opengameart.org/content/lpc-clothing-updates
+		- https://opengameart.org/content/lpc-expanded-socks-shoes
 
