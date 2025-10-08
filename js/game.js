@@ -736,7 +736,7 @@ class OverworldScene extends Phaser.Scene {
         // ---- NPCs ----
         this.angryBridesmaid = this.physics.add.sprite(200, 200, 'angry_bridesmaid_idle', 4)
             .setImmovable(true).setScale(0.33).play('angry_bridesmaid_idle_down');
-        this.priest = this.physics.add.sprite(600, 380, 'priest_idle', 4)
+        this.priest = this.physics.add.sprite(580, 350, 'priest_idle', 4)
             .setImmovable(true).setScale(0.33).play('priest_idle_down');
         this.drunkUncle = this.physics.add.sprite(400, 300, 'drunk_uncle_idle', 4)
             .setImmovable(true).setScale(0.33).play('drunk_uncle_idle_down');
@@ -749,17 +749,26 @@ class OverworldScene extends Phaser.Scene {
         this.priest.npcName = 'Priest';
         this.drunkUncle.npcName = 'Drunk Uncle';
 
+        // --- Guest spawn points from Tiled ---
+        const guestSpawnPoints = map.filterObjects('Objects', obj =>
+            obj.name && obj.name.startsWith('Guest_spawn_')
+        );
+
         // --- Guests group (Physics-safe) ---
         this.guests = this.physics.add.group({
             immovable: false,
             collideWorldBounds: true
         });
 
+        // --- Spawn guests at random unused spawn points ---
         for (let i = 1; i <= 4; i++) {
-            const x = Phaser.Math.Between(150, 650);
-            const y = Phaser.Math.Between(150, 450);
+            if (guestSpawnPoints.length === 0) break; // no more available spots
 
-            const guest = this.guests.create(x, y, `guest${i}_idle`)
+            // pick and remove one random spawn
+            const idx = Phaser.Math.Between(0, guestSpawnPoints.length - 1);
+            const spawn = guestSpawnPoints.splice(idx, 1)[0];
+
+            const guest = this.guests.create(spawn.x, spawn.y, `guest${i}_idle`)
                 .setScale(0.33)
                 .setBounce(0.2)
                 .setDrag(50, 50)
@@ -822,6 +831,33 @@ class OverworldScene extends Phaser.Scene {
             }
         });
 
+        // ---- SIGNS ----
+        this.signs = map.filterObjects('Objects', obj =>
+            ['Sundial', 'Sign_Veggies', 'Sign_Danger!','caveEntrace'].includes(obj.name)
+        );
+
+        this.signGroup = this.physics.add.staticGroup();
+
+        this.signs.forEach(signObj => {
+            // Adjust for Tiled origin (center on tile)
+            const signX = signObj.x + (signObj.width ? signObj.width / 2 : 16);
+            const signY = signObj.y - (signObj.height ? signObj.height / 2 : 16);
+
+            const sign = this.signGroup.create(signX, signY, null)
+                .setSize(40, 40)
+                .setVisible(false);
+
+            sign.signName = signObj.name;
+            sign.npcName = signObj.name; // reuse prompt logic
+        });
+
+
+        // Overlap detection for signs
+        this.physics.add.overlap(this.player, this.signGroup, (player, sign) => {
+            this.setNearbySign(sign);
+        }, null, this);
+
+
         // ---- CAMERA ----
         const mainCam = this.cameras.main;
         this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -862,7 +898,12 @@ class OverworldScene extends Phaser.Scene {
             backgroundColor: '#000A',
             padding: { x: 4, y: 2 },
             color: '#fff'
-        }).setOrigin(0.5, 1).setVisible(false).setScrollFactor(0);
+        })
+            .setOrigin(0.5, 1)
+            .setScrollFactor(0)
+            .setDepth(100)     // ensure above HUD but below dialogue
+            .setVisible(false);
+
         this.uiRoot.add(this.promptLabel);
 
         // ---- DIALOG BOX ----
@@ -884,16 +925,21 @@ class OverworldScene extends Phaser.Scene {
 
         // ---- SPACE KEY ----
         this.input.keyboard.on('keydown-SPACE', () => {
-            if (this.dialogueOpen) this.closeDialogue();
-            else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
+            if (this.dialogueOpen) {
+                this.closeDialogue();
+            }
+            else if (this.currentlyNearNPC) {
+                this.openDialogueFor(this.currentlyNearNPC);
+            }
+            else if (this.currentlyNearSign) {
+                this.readSign(this.currentlyNearSign);
+            }
             else if (this.readyForFinalBattle &&
                 Phaser.Math.Distance.Between(this.player.x, this.player.y, this.caveCoords.x, this.caveCoords.y) < 40) {
                 const foe = this.game.characters.find(c => c.id === 'bridezilla');
-                // Adjust stats based on items
                 if (this.inventory.includes('wedding_band')) foe.hp -= 30;
                 if (this.inventory.includes('something_blue')) this.playerData.hp += 30;
                 if (this.inventory.includes('wedding_veil')) foe.atkMod *= 0.8;
-
                 this.scene.launch('BattleScene', { player: this.playerData, foe });
                 this.scene.pause();
             }
@@ -920,16 +966,53 @@ class OverworldScene extends Phaser.Scene {
         this.currentlyNearNPC = null;
         this.promptLabel.setVisible(false);
     }
+    // ===== SIGN INTERACTIONS =====
+    setNearbySign(sign) {
+        this.currentlyNearSign = sign;
+        const actionKey = isMobile ? '[A] Tap' : '[SPACE] Read';
+        const labelName = sign.signName.replace('Sign_', '').replace('_', ' ');
+        this.promptLabel.setText(`${actionKey} ${labelName}`);
+        this.promptLabel.setVisible(true);
+        this.updateNpcPromptPos();
+    }
+    clearNearbySign() {
+        this.currentlyNearSign = null;
+        this.promptLabel.setVisible(false);
+    }
+    readSign(sign) {
+        if (!sign) return;
+
+        let message = "You read the sign...";
+        switch (sign.signName) {
+            case "Sundial":
+                message = "“It's a few minutes to your death if you don't get those items back.”";
+                break;
+            case "Sign_Veggies":
+                message = "“Food for rabbits and vegetarians.”";
+                break;
+            case "Sign_Danger!":
+                message = "“Steep ramp ahead! By walking down this ramp you fully indemnify and hold harmless the wedding venue and all affiliated parties...[blah blah]”";
+                break;
+            case "caveEntrace":
+                message = "Bridezilla's cave”";
+                break;    
+        }
+
+        this.showAdhocBubble(this.player, message);
+        this.clearNearbySign();
+    }
     updateNpcPromptPos() {
-        if (!this.currentlyNearNPC || !this.promptLabel.visible) return;
+        if ((!this.currentlyNearNPC && !this.currentlyNearSign) || !this.promptLabel.visible) return;
+
         const cam = this.cameras.main;
-        const npc = this.currentlyNearNPC;
-        const sx = npc.x - cam.scrollX;
-        const sy = npc.y - npc.displayHeight * 1.2 - cam.scrollY;
+        const target = this.currentlyNearNPC || this.currentlyNearSign;
+        const sx = target.x - cam.scrollX;
+        const sy = target.y - (target.displayHeight ? target.displayHeight * 1.2 : 40) - cam.scrollY;
         this.promptLabel.setPosition(
             Phaser.Math.Clamp(sx, 40, GAME_WIDTH - 40),
             Phaser.Math.Clamp(sy, 20, GAME_HEIGHT - 20)
         );
+
     }
 
     // ===== DIALOGUE SYSTEM =====
@@ -968,6 +1051,7 @@ class OverworldScene extends Phaser.Scene {
     }
 
     showAdhocBubble(npc, text) {
+        this.promptLabel.setVisible(false);
         const cam = this.cameras.main;
         const sx = npc.x - cam.scrollX;
         const sy = npc.y - cam.scrollY;
@@ -982,7 +1066,7 @@ class OverworldScene extends Phaser.Scene {
 
         this.dialogBox.setPosition(sx, bubbleY).setSize(bubbleWidth, bubbleHeight).setVisible(true);
         this.dialogText.setPosition(sx, bubbleY - bubbleHeight / 2 + 16);
-
+        this.uiCam.dirty = true;
         this.hud.setVisible(false);
         this.dialogueOpen = true;
     }
@@ -1068,6 +1152,7 @@ class OverworldScene extends Phaser.Scene {
     }
 
     showDialogueNode(node) {
+        this.promptLabel.setVisible(false);
         if (this.choiceButtons) this.choiceButtons.forEach(b => b.destroy());
         this.choiceButtons = [];
 
@@ -1093,7 +1178,7 @@ class OverworldScene extends Phaser.Scene {
 
         this.dialogBox.setPosition(sx, bubbleY).setSize(bubbleWidth, bubbleHeight).setVisible(true);
         this.dialogText.setPosition(sx, bubbleY - bubbleHeight / 2 + 14);
-
+        this.uiCam.dirty = true;
         this.hud.setVisible(false);
         this.dialogueOpen = true;
 
@@ -1154,7 +1239,12 @@ class OverworldScene extends Phaser.Scene {
         this.dialogText.setVisible(false);
         this.hud.setVisible(true);
         this.dialogueOpen = false;
-
+        // Restore nearby prompt if still near an NPC or sign
+        this.time.delayedCall(100, () => {
+            if (this.currentlyNearNPC) this.setNearbyNPC(this.currentlyNearNPC);
+            else if (this.currentlyNearSign) this.setNearbySign(this.currentlyNearSign);
+        });
+        this.promptLabel.setAlpha(1);
         if (this.choiceButtons) {
             this.choiceButtons.forEach(b => b.destroy());
             this.choiceButtons = [];
@@ -1175,6 +1265,7 @@ class OverworldScene extends Phaser.Scene {
             "You, Chosen One, must recover them\n" +
             "from the guests you encounter —\n" +
             "by words... or by force.\n\n" +
+            "Hurry before the Bride realises and all hell breaks loose.\n\n" +
             "Press [SPACE] to begin";
 
         this.dialogText.setText(intro).setWordWrapWidth(GAME_WIDTH - 120).setVisible(true);
@@ -1188,29 +1279,24 @@ class OverworldScene extends Phaser.Scene {
         this.hud.setVisible(false);
         this.dialogueOpen = true;
 
-        this.input.keyboard.once('keydown-SPACE', () => {
+        const startQuest = () => {
             this.dialogBox.setVisible(false);
             this.dialogText.setVisible(false);
             this.hud.setVisible(true);
             this.dialogueOpen = false;
 
-            // --- Start 5-minute countdown (300 000 ms) ---
+            // Start 5-minute countdown etc.
             this.time.delayedCall(300000, () => this.spawnBridezilla(), [], this);
             this.remainingTime = 300000;
-
-            // --- Timer label (bottom-left, slightly inward for mobile UX) ---
             this.timerLabel = this.add.text(GAME_WIDTH * 0.1, GAME_HEIGHT - 20, "Bridezilla Timer: 05:00", {
-                font: '14px monospace',
-                fill: '#fff',
-                backgroundColor: '#0008',
-                padding: { x: 8, y: 4 },
-                align: 'center',
-            })
-                .setScrollFactor(0)     // stays fixed to camera
-                .setDepth(9999)
-                .setOrigin(0, 1);        // anchor bottom-left corner
+                font: '14px monospace', fill: '#fff', backgroundColor: '#0008', padding: { x: 8, y: 4 }, align: 'center'
+            }).setScrollFactor(0).setDepth(9999).setOrigin(0, 1);
+        };
 
-        });
+        // Keyboard + tap
+        this.input.keyboard.once('keydown-SPACE', startQuest);
+        this.input.once('pointerdown', startQuest);
+
     }
 
     // ===== MOBILE CONTROLS =====
@@ -1258,6 +1344,16 @@ class OverworldScene extends Phaser.Scene {
         this.actionBtn.on('pointerdown', () => {
             if (this.dialogueOpen) this.closeDialogue();
             else if (this.currentlyNearNPC) this.openDialogueFor(this.currentlyNearNPC);
+            else if (this.currentlyNearSign) this.readSign(this.currentlyNearSign);
+            else if (this.readyForFinalBattle &&
+                Phaser.Math.Distance.Between(this.player.x, this.player.y, this.caveCoords.x, this.caveCoords.y) < 40) {
+                const foe = this.game.characters.find(c => c.id === 'bridezilla');
+                if (this.inventory.includes('wedding_band')) foe.hp -= 30;
+                if (this.inventory.includes('something_blue')) this.playerData.hp += 30;
+                if (this.inventory.includes('wedding_veil')) foe.atkMod *= 0.8;
+                this.scene.launch('BattleScene', { player: this.playerData, foe });
+                this.scene.pause();
+            }
         });
     }
 
@@ -1300,6 +1396,14 @@ class OverworldScene extends Phaser.Scene {
     update() {
         const speed = BASE_SPEED;
         let moveX = 0, moveY = 0;
+
+        // --- Ensure prompt is hidden when dialogue is open ---
+        if (this.dialogueOpen) {
+            if (this.promptLabel.visible) {
+                this.promptLabel.setVisible(false);
+                this.promptLabel.alpha = 0;
+            }
+        }
 
         if (this.dialogueOpen) {
             this.player.setVelocity(0, 0);
@@ -1712,12 +1816,14 @@ class BattleScene extends Phaser.Scene {
                 font: '16px monospace', color: '#fff',
                 wordWrap: { width: 440, useAdvancedWrap: true }, align: 'center'
             }).setOrigin(0.5).setDepth(10000);
-            this.input.keyboard.once('keydown-SPACE', () => {
+            const restart = () => {
                 prompt.destroy(); msg.destroy();
                 this.scene.stop('BattleScene');
                 this.scene.stop('OverworldScene');
                 this.scene.start('TitleScene');
-            });
+            };
+            this.input.keyboard.once('keydown-SPACE', restart);
+            this.input.once('pointerdown', restart);
         });
     }
 
@@ -1765,7 +1871,9 @@ class CreditsScene extends Phaser.Scene {
                 this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "Press [SPACE] to Return", {
                     font: '16px VT323', color: '#FFD700'
                 }).setOrigin(0.5);
-                this.input.keyboard.once('keydown-SPACE', () => this.scene.start('TitleScene'));
+                const backToTitle = () => this.scene.start('TitleScene');
+                this.input.keyboard.once('keydown-SPACE', backToTitle);
+                this.input.once('pointerdown', backToTitle);
             }
         });
     }
