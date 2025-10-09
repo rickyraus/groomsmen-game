@@ -16,10 +16,14 @@
         "back": "assets/battle_sprites/back_travioli.png"
       },
       "moves": [
-        { "name": "Endless Dialogue", "type": "psychic", "power": 12, "accuracy": 100, "effect": { "chanceSkip": 20 } },
-        { "name": "Sup?", "type": "trick", "power": 6, "accuracy": 95, "effect": { "chanceSkip": 25 } },
-        { "name": "Stiff Upper Lip", "type": "buff", "power": 0, "accuracy": 100, "effect": { "defBoost": 20, "durationTurns": 3 } },
-        { "name": "Confusing Monologue", "type": "psychic", "power": 15, "accuracy": 75, "effect": { "chanceConfuse": 40 } }
+        { "name": "Endless Dialogue", "type": "psychic", "power": 12, "accuracy": 100, "effect": { "chanceSkip": 20 }, "desc": "Deals 12 damage with 100% accuracy and a 20% chance to make the foe skip their next turn." },
+        { "name": "Sup?", "type": "trick", "power": 20, "accuracy": 85, "effect": {}, "desc": "A sharp retort disguised as small talk. Deals 20 damage with 85% accuracy." },
+        { "name": "Stiff Upper Lip", "type": "buff", "power": 0, "accuracy": 100, "effect": { "defBoost": 20, "durationTurns": 3 }, "desc": "Channels inner composure to raise defense for 3 turns." },
+        { "name": "Confusing Monologue", "type": "psychic", "power": 15, "accuracy": 75, "effect": { "chanceConfuse": 40 }, "desc": "Delivers an elaborate speech that leaves the foe utterly baffled with a 40% chance to confuse." }
+      ],
+      "synergies": [
+        "Use Stiff Upper Lip before Endless Dialogue to tank while tiring foes.",
+        "Combine Confusing Monologue and Sup? for strong control and follow-up damage."
       ]
     },
     {
@@ -39,10 +43,14 @@
         "back": "assets/battle_sprites/back_badger.png"
       },
       "moves": [
-        { "name": "Fartquake", "type": "physical", "power": 22, "accuracy": 75, "effect": { "stun": true, "durationTurns": 1 } },
-        { "name": "Rock Facts", "type": "trick", "power": 8, "accuracy": 90, "effect": { "chanceConfuse": 20 } },
-        { "name": "Dad Joke", "type": "psychic", "power": 0, "accuracy": 100, "effect": { "chanceSkip": 40 } },
-        { "name": "Seismic Yawn", "type": "status", "power": 0, "accuracy": 85, "effect": { "sleep": true, "durationTurns": 2 } }
+        { "name": "Fartquake", "type": "physical", "power": 22, "accuracy": 75, "effect": { "stun": true, "durationTurns": 1 }, "desc": "Shakes the ground (and noses). Heavy hit with a stun chance." },
+        { "name": "Rock Facts", "type": "trick", "power": 8, "accuracy": 90, "effect": { "chanceConfuse": 20 }, "desc": "Recites obscure trivia that mildly confuses enemies." },
+        { "name": "Dad Joke", "type": "psychic", "power": 0, "accuracy": 100, "effect": { "chanceSkip": 40 }, "desc": "So bad it hurts. Foes may freeze to process the pun." },
+        { "name": "Seismic Yawn", "type": "status", "power": 0, "accuracy": 85, "effect": { "sleep": true, "durationTurns": 2 }, "desc": "Lets out a yawn so deep it can put enemies to sleep." }
+      ],
+      "synergies": [
+        "Use Fartquake followed by Dad Joke to keep enemies stunned and silenced.",
+        "Seismic Yawn sets up Rock Facts confusion for chaos control."
       ]
     },
     {
@@ -62,10 +70,14 @@
         "back": "assets/battle_sprites/back_enfant.png"
       },
       "moves": [
-        { "name": "Fromage Barrage", "type": "physical", "power": 20, "accuracy": 90, "effect": { "reduceDefPct": 15, "durationTurns": 2 } },
-        { "name": "Wine Spit", "type": "status", "power": 10, "accuracy": 95, "effect": { "chanceConfuse": 30 } },
-        { "name": "Surrender", "type": "story", "power": 0, "accuracy": 100, "effect": { "atkDebuff": 50, "durationTurns": 3 } },
-        { "name": "Baguette Bash", "type": "physical", "power": 25, "accuracy": 70, "effect": { "stun": true, "durationTurns": 1 } }
+        { "name": "Fromage Barrage", "type": "physical", "power": 20, "accuracy": 90, "effect": { "reduceDefPct": 15, "durationTurns": 2 }, "desc": "Flings cheese wheels to soften enemy defenses." },
+        { "name": "Wine Spit", "type": "status", "power": 10, "accuracy": 95, "effect": { "chanceConfuse": 30 }, "desc": "Spits vintage red, confusing and irritating foes." },
+        { "name": "Surrender", "type": "story", "power": 0, "accuracy": 100, "effect": { "atkDebuff": 50, "durationTurns": 3 }, "desc": "Feigns defeat to sap the opponent’s fighting spirit." },
+        { "name": "Baguette Bash", "type": "physical", "power": 25, "accuracy": 70, "effect": { "stun": true, "durationTurns": 1 }, "desc": "A clumsy but devastating baguette swing; may stun." }
+      ],
+      "synergies": [
+        "Fromage Barrage lowers defense — follow with Baguette Bash for maximum damage.",
+        "Wine Spit pairs with Surrender to confuse and weaken foes simultaneously."
       ]
     },
     {
@@ -85,10 +97,14 @@
         "back": "assets/battle_sprites/back_boet.png"
       },
       "moves": [
-        { "name": "Paws of Justice", "type": "physical", "power": 15, "accuracy": 95, "effect": { "reduceDefPct": 10, "durationTurns": 2 } },
-        { "name": "Buffer Overflow", "type": "psychic", "power": 10, "accuracy": 90, "effect": { "chanceConfuse": 25 } },
-        { "name": "Braai Tongs Slam", "type": "physical", "power": 18, "accuracy": 85, "effect": { "bleed": true, "durationTurns": 2 } },
-        { "name": "Boet Booster", "type": "buff", "power": 0, "accuracy": 100, "effect": { "atkBoost": 20, "durationTurns": 2 } }
+        { "name": "Paws of Justice", "type": "physical", "power": 15, "accuracy": 95, "effect": { "reduceDefPct": 10, "durationTurns": 2 }, "desc": "Unleashes loyal dog spirits to chip away enemy defense." },
+        { "name": "Buffer Overflow", "type": "psychic", "power": 10, "accuracy": 90, "effect": { "chanceConfuse": 25 }, "desc": "Overloads the opponent’s thoughts with pure Boet energy." },
+        { "name": "Braai Tongs Slam", "type": "physical", "power": 18, "accuracy": 85, "effect": { "bleed": true, "durationTurns": 2 }, "desc": "Smacks with sizzling tongs, causing lingering burns." },
+        { "name": "Boet Booster", "type": "buff", "power": 0, "accuracy": 100, "effect": { "atkBoost": 20, "durationTurns": 2 }, "desc": "Hypes himself with brotherly pride to raise attack." }
+      ],
+      "synergies": [
+        "Use Boet Booster before Braai Tongs Slam for maximum burn damage.",
+        "Paws of Justice and Buffer Overflow lower defense and confuse — a solid setup."
       ]
     },
     {
@@ -105,9 +121,9 @@
       },
       "battleSprites": { "front": "assets/battle_sprites/front_angry_bridesmaid.png" },
       "moves": [
-        { "name": "Angry Slap", "type": "physical", "power": 12, "accuracy": 95 },
-        { "name": "Passive Aggression", "type": "status", "power": 0, "accuracy": 100, "effect": { "chanceConfuse": 25 } },
-        { "name": "Wine Splash", "type": "status", "power": 5, "accuracy": 90, "effect": { "chanceSkip": 20 } }
+        { "name": "Angry Slap", "type": "physical", "power": 12, "accuracy": 95, "desc": "A slap sharp enough to leave a wine stain." },
+        { "name": "Passive Aggression", "type": "status", "power": 0, "accuracy": 100, "effect": { "chanceConfuse": 25 }, "desc": "A fake smile and cutting tone that confuses opponents." },
+        { "name": "Wine Splash", "type": "status", "power": 5, "accuracy": 90, "effect": { "chanceSkip": 20 }, "desc": "Flings rosé in the foe’s face to slow their reaction." }
       ]
     },
     {
@@ -124,9 +140,9 @@
       },
       "battleSprites": { "front": "assets/battle_sprites/front_priest.png" },
       "moves": [
-        { "name": "Holy Smite", "type": "physical", "power": 15, "accuracy": 90 },
-        { "name": "Divine Judgement", "type": "psychic", "power": 18, "accuracy": 85, "effect": { "stun": true, "durationTurns": 1 } },
-        { "name": "Sermon", "type": "buff", "power": 0, "accuracy": 100, "effect": { "defBoost": 15, "durationTurns": 2 } }
+        { "name": "Holy Smite", "type": "physical", "power": 15, "accuracy": 90, "desc": "Delivers a blessed strike infused with divine power." },
+        { "name": "Divine Judgement", "type": "psychic", "power": 18, "accuracy": 85, "effect": { "stun": true, "durationTurns": 1 }, "desc": "Calls down judgement, stunning the unworthy." },
+        { "name": "Sermon", "type": "buff", "power": 0, "accuracy": 100, "effect": { "defBoost": 15, "durationTurns": 2 }, "desc": "Rallies faith, strengthening defense through conviction." }
       ]
     },
     {
@@ -143,9 +159,9 @@
       },
       "battleSprites": { "front": "assets/battle_sprites/front_drunk_uncle.png" },
       "moves": [
-        { "name": "Flask Swing", "type": "physical", "power": 14, "accuracy": 90 },
-        { "name": "Slurred Insult", "type": "trick", "power": 8, "accuracy": 95, "effect": { "chanceConfuse": 20 } },
-        { "name": "Tipsy Stumble", "type": "status", "power": 0, "accuracy": 100, "effect": { "chanceSkip": 15 } }
+        { "name": "Flask Swing", "type": "physical", "power": 14, "accuracy": 90, "desc": "Swings a flask wildly; hits hard if it connects." },
+        { "name": "Slurred Insult", "type": "trick", "power": 8, "accuracy": 95, "effect": { "chanceConfuse": 20 }, "desc": "A half-coherent insult that leaves foes mentally shaken." },
+        { "name": "Tipsy Stumble", "type": "status", "power": 0, "accuracy": 100, "effect": { "chanceSkip": 15 }, "desc": "Trips and dodges accidentally, sometimes disrupting the enemy." }
       ]
     },
     {
@@ -157,15 +173,15 @@
       "hp": 200,
       "avatar": "assets/avatars/bridezilla.png",
       "sprites": {
-        "idle": "assets/sprites/bridezilla/standard/idle.png",
-        "walk": "assets/sprites/bridezilla/standard/walk.png"
+        "idle": "assets/sprites/bridezilla/idle.png",
+        "walk": "assets/sprites/bridezilla/walk.png"
       },
       "battleSprites": { "front": "assets/battle_sprites/front_bridezilla.png" },
       "moves": [
-        { "name": "Veil Whip", "type": "physical", "power": 25, "accuracy": 85, "effect": { "stun": true, "durationTurns": 1 } },
-        { "name": "Screech of Doom", "type": "psychic", "power": 20, "accuracy": 90, "effect": { "chanceConfuse": 30 } },
-        { "name": "Cold Feet", "type": "status", "power": 0, "accuracy": 100, "effect": { "atkDebuff": 20, "durationTurns": 2 } },
-        { "name": "Wedding Tantrum", "type": "ultimate", "power": 40, "accuracy": 70, "effect": { "chanceSkip": 50 } }
+        { "name": "Veil Whip", "type": "physical", "power": 25, "accuracy": 85, "effect": { "stun": true, "durationTurns": 1 }, "desc": "Cracks her veil like a whip, stunning unlucky victims." },
+        { "name": "Screech of Doom", "type": "psychic", "power": 20, "accuracy": 90, "effect": { "chanceConfuse": 30 }, "desc": "Lets out an ear-splitting shriek that confuses enemies." },
+        { "name": "Cold Feet", "type": "status", "power": 0, "accuracy": 100, "effect": { "atkDebuff": 20, "durationTurns": 2 }, "desc": "Saps enemy courage with pre-wedding dread, lowering attack." },
+        { "name": "Wedding Tantrum", "type": "ultimate", "power": 35, "accuracy": 70, "effect": { "chanceSkip": 50 }, "desc": "Unleashes pure bridal rage, forcing all foes to cower in fear." }
       ]
     }
   ]

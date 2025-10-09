@@ -4,16 +4,16 @@
       "id": "start",
       "text": "You ATE the cake!?",
       "choices": [
-        { "text": "Sorry… it looked delicious.", "next": "apology" },
-        { "text": "Relax, it’s just cake.", "next": "battle" },
+        { "text": "Sorry… it looked delicious, and I'm hungover.", "next": "apology" },
+        { "text": "Relax, I replaced it with shaving cream and carboard.", "next": "battle" },
         { "text": "Blame the drunk uncle, not me!", "next": "blame" }
       ]
     },
     {
       "id": "apology",
-      "text": "Hmph. At least you admit it.",
+      "text": "Hmph. At least you admit it. Fix it now!",
       "choices": [
-        { "text": "I’ll bake you a new one.", "reward": "wedding_veil", "next": "end" }
+        { "text": "Already ordered a replacement.", "reward": "wedding_veil", "next": "end" }
       ]
     },
     {
@@ -21,7 +21,7 @@
       "text": "Don’t drag HIM into this!",
       "choices": [
         { "text": "Okay fine, it was me. Sorry.", "next": "apology" },
-        { "text": "He told me to eat it!", "next": "battle" }
+        { "text": "He can be super convincing!", "next": "battle" }
       ]
     },
     {
@@ -32,7 +32,7 @@
     },
     {
       "id": "end",
-      "text": "Fine… take this veil and leave me alone.",
+      "text": "Fine… take this veil to the bride and leave me alone.",
       "choices": []
     }
   ],
@@ -42,7 +42,7 @@
       "id": "start",
       "text": "We’ve run out of wine for communion…",
       "choices": [
-        { "text": "I’ll fetch some from the cellar.", "reward": "something_blue", "next": "end" },
+        { "text": "I think there's some sangria at the bar...", "reward": "something_blue", "next": "end" },
         { "text": "Just use grape juice?", "next": "battle" },
         { "text": "Don’t worry, I spiked the punch.", "next": "suspicious" }
       ]

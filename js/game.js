@@ -105,7 +105,10 @@ class LoadingScene extends Phaser.Scene {
 
         // --- Core game assets ---
         this.load.image('overworld_tiles', 'assets/tilesets/Overworld.png');
-        this.load.image('objects_tiles', 'assets/tilesets/objects.png');
+        this.load.spritesheet('objects_tiles', 'assets/tilesets/objects.png', {
+            frameWidth: 16,
+            frameHeight: 16
+        });
         this.load.image('battle_bg_grass', 'assets/backgrounds/battle_grass.png');
         this.load.image('credits_win', 'assets/backgrounds/credits_win.png');
         this.load.tilemapTiledJSON('map', 'assets/tilemaps/overworld.json');
@@ -116,15 +119,15 @@ class LoadingScene extends Phaser.Scene {
         this.load.audio('battle_theme', 'assets/audio/battle_theme.ogg');
         this.load.audio('menu_theme', 'assets/audio/menu_theme.ogg');
 
-        this.load.audio('slash_sfx', 'assets/sfx/slash.ogg');
-        this.load.audio('attack_sfx', 'assets/sfx/hit.ogg');
-        this.load.audio('heal_sfx', 'assets/sfx/heal.ogg');
+        this.load.audio('slash', 'assets/sfx/slash.ogg');
+        this.load.audio('hit', 'assets/sfx/hit.ogg');
+        this.load.audio('heal', 'assets/sfx/heal.ogg');
 
         this.load.spritesheet('quest_items', 'assets/sprites/items.png', {
             frameWidth: 341, frameHeight: 1024
         });
 
-        for (let i = 1; i <= 4; i++) {
+        for (let i = 1; i <= 5; i++) {
             this.load.spritesheet(`guest${i}_idle`, `assets/sprites/wedding_guest/guest${i}/idle.png`, {
                 frameWidth: 64, frameHeight: 64
             });
@@ -132,6 +135,23 @@ class LoadingScene extends Phaser.Scene {
                 frameWidth: 64, frameHeight: 64
             });
         }
+
+        // --- NPC Hurt animations (play on defeat) ---
+        this.load.spritesheet('angry_bridesmaid_hurt', 'assets/sprites/angry_bridesmaid/standard/hurt.png',
+            { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('priest_hurt', 'assets/sprites/priest/standard/hurt.png',
+            { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('drunk_uncle_hurt', 'assets/sprites/drunk_uncle/standard/hurt.png',
+            { frameWidth: 64, frameHeight: 64 });
+
+        this.load.spritesheet('bridezilla_idle', 'assets/sprites/bridezilla/idle.png', {
+            frameWidth: 16,
+            frameHeight: 16
+        });
+        this.load.spritesheet('bridezilla_walk', 'assets/sprites/bridezilla/walk.png', {
+            frameWidth: 16,
+            frameHeight: 16
+        });
 
         WebFont.load({ google: { families: ['Pixelify Sans', 'VT323'] } });
 
@@ -256,7 +276,7 @@ class BootScene extends Phaser.Scene {
             }
         });
 
-        for (let i = 1; i <= 4; i++) {
+        for (let i = 1; i <= 5; i++) {
             // --- Idle animations (1 col x 4 rows = 4 frames total) ---
             this.anims.create({
                 key: `guest${i}_idle_down`,
@@ -299,6 +319,52 @@ class BootScene extends Phaser.Scene {
                 key: `guest${i}_walk_right`,
                 frames: this.anims.generateFrameNumbers(`guest${i}_walk`, { start: 24, end: 31 }),
                 frameRate: 10, repeat: -1
+            });
+        }
+
+        // === Hurt animations for NPCs ===
+        ['angry_bridesmaid', 'priest', 'drunk_uncle'].forEach(id => {
+            if (this.textures.exists(id + '_hurt')) {
+                this.anims.create({
+                    key: id + '_hurt_anim',
+                    frames: this.anims.generateFrameNumbers(id + '_hurt', { start: 0, end: 5 }),
+                    frameRate: 8,
+                    repeat: 0
+                });
+            }
+        });
+
+        // ===== BRIDEZILLA ANIMATIONS =====
+        if (!this.anims.exists('bridezilla_idle_down')) {
+            // Idle directions: Top=0, Left=1, Down=2, Right=3
+            this.anims.create({ key: 'bridezilla_idle_up', frames: [{ key: 'bridezilla_idle', frame: 0 }] });
+            this.anims.create({ key: 'bridezilla_idle_left', frames: [{ key: 'bridezilla_idle', frame: 1 }] });
+            this.anims.create({ key: 'bridezilla_idle_down', frames: [{ key: 'bridezilla_idle', frame: 2 }] });
+            this.anims.create({ key: 'bridezilla_idle_right', frames: [{ key: 'bridezilla_idle', frame: 3 }] });
+        }
+
+        // Walk sheet 4×8 = 32 frames (0–31)
+        // 8 frames per direction: Up(0–7), Left(8–15), Down(16–23), Right(24–31)
+        if (!this.anims.exists('bridezilla_walk_down')) {
+            this.anims.create({
+                key: 'bridezilla_walk_up',
+                frames: this.anims.generateFrameNumbers('bridezilla_walk', { start: 0, end: 7 }),
+                frameRate: 8, repeat: -1
+            });
+            this.anims.create({
+                key: 'bridezilla_walk_left',
+                frames: this.anims.generateFrameNumbers('bridezilla_walk', { start: 8, end: 15 }),
+                frameRate: 8, repeat: -1
+            });
+            this.anims.create({
+                key: 'bridezilla_walk_down',
+                frames: this.anims.generateFrameNumbers('bridezilla_walk', { start: 16, end: 23 }),
+                frameRate: 8, repeat: -1
+            });
+            this.anims.create({
+                key: 'bridezilla_walk_right',
+                frames: this.anims.generateFrameNumbers('bridezilla_walk', { start: 24, end: 31 }),
+                frameRate: 8, repeat: -1
             });
         }
 
@@ -413,19 +479,14 @@ class CharacterSelectScene extends Phaser.Scene {
 
     create() {
         const W = GAME_WIDTH, H = GAME_HEIGHT;
-
-        // ✅ Only allow *playable* characters (non-NPCs) for selection
         const CHARACTERS = this.game.characters.filter(ch => !ch.isNPC);
 
-        // ================= BACKGROUND =================
+        // --- Background ---
         const g = this.make.graphics({ x: 0, y: 0, add: false });
-
-        // tiny dot texture (used for fireflies)
         g.fillStyle(0x224422, 1);
         g.fillCircle(2, 2, 2);
         g.generateTexture('spark', 4, 4);
 
-        // subtle speckle noise tile
         const TILE = 64;
         g.clear();
         g.fillStyle(0x173017, 1);
@@ -435,19 +496,13 @@ class CharacterSelectScene extends Phaser.Scene {
             g.fillRect(Phaser.Math.Between(0, TILE), Phaser.Math.Between(0, TILE), 1, 1);
         }
         g.generateTexture('speckle64', TILE, TILE);
-
-        // scanline overlay
         g.clear();
         g.fillStyle(0x000000, 0.18);
         g.fillRect(0, 1, TILE, 1);
         g.generateTexture('scanline', TILE, 2);
 
-        this.bgFar = this.add.tileSprite(0, 0, W, H, 'speckle64')
-            .setOrigin(0).setAlpha(0.85);
-        this.bgNear = this.add.tileSprite(0, 0, W, H, 'speckle64')
-            .setOrigin(0).setAlpha(0.95);
-
-        // fireflies
+        this.bgFar = this.add.tileSprite(0, 0, W, H, 'speckle64').setOrigin(0).setAlpha(0.85);
+        this.bgNear = this.add.tileSprite(0, 0, W, H, 'speckle64').setOrigin(0).setAlpha(0.95);
         this.add.particles(0, 0, 'spark', {
             x: { min: 0, max: W },
             y: { min: 0, max: H },
@@ -459,11 +514,9 @@ class CharacterSelectScene extends Phaser.Scene {
             alpha: { start: 0.5, end: 0 },
             blendMode: 'ADD'
         });
+        this.add.tileSprite(0, 0, W, H, 'scanline').setOrigin(0).setAlpha(0.08);
 
-        this.add.tileSprite(0, 0, W, H, 'scanline')
-            .setOrigin(0).setAlpha(0.08);
-
-        // ================= TITLE =================
+        // --- Title ---
         this.add.text(W / 2, 60, 'LEGEND OF THE BEST MEN', {
             fontFamily: '"Pixelify Sans"',
             fontSize: '32px',
@@ -471,21 +524,16 @@ class CharacterSelectScene extends Phaser.Scene {
             stroke: '#000',
             strokeThickness: 6
         }).setOrigin(0.5);
-
         this.add.text(W / 2, 100, 'Choose your Champion', {
             fontFamily: '"VT323"',
             fontSize: '20px',
             fill: '#ffffff'
         }).setOrigin(0.5);
 
-        // ================= CHARACTER CARDS =================
+        // --- Character cards ---
         this.selected = 0;
         this.cards = [];
-
-        // reusable glow
-        g.clear();
-        g.fillStyle(0xffffff, 1);
-        g.fillCircle(64, 64, 64);
+        g.clear(); g.fillStyle(0xffffff, 1); g.fillCircle(64, 64, 64);
         g.generateTexture('softGlow', 128, 128);
 
         const spacingX = 180;
@@ -494,39 +542,31 @@ class CharacterSelectScene extends Phaser.Scene {
 
         CHARACTERS.forEach((ch, idx) => {
             const x = baseX + idx * spacingX;
-
             const cardBg = this.add.rectangle(0, 0, 120, 160, 0x1f1f1f, 0.9)
                 .setStrokeStyle(2, 0x777777);
-
             const glow = this.add.image(0, 0, 'softGlow')
                 .setScale(0.7).setTint(ch.color).setAlpha(0);
 
-            // ✅ Avatar (defensive: if missing, fallback to placeholder)
             let portrait;
             if (this.textures.exists('avatar_' + ch.id)) {
                 portrait = this.add.image(0, -10, 'avatar_' + ch.id);
-                const maxW = 90, maxH = 90;
                 const tex = this.textures.get('avatar_' + ch.id).getSourceImage();
-                const scale = Math.min(maxW / tex.width, maxH / tex.height);
+                const scale = Math.min(90 / tex.width, 90 / tex.height);
                 portrait.setScale(scale);
             } else {
                 portrait = this.add.rectangle(0, -10, 80, 80, ch.color || 0x999999);
             }
 
             const nameText = this.add.text(0, 66, ch.displayName, {
-                fontFamily: '"VT323"',
-                fontSize: '16px',
-                color: '#FFD700'
+                fontFamily: '"VT323"', fontSize: '16px', color: '#FFD700'
             }).setOrigin(0.5);
 
             const colorFrame = this.add.rectangle(0, 0, 124, 164)
                 .setStrokeStyle(3, ch.color).setAlpha(0);
 
             const container = this.add.container(x, y, [glow, cardBg, portrait, nameText, colorFrame]);
-            container.setSize(120, 160);
-            container.setInteractive({ useHandCursor: true });
+            container.setSize(120, 160).setInteractive({ useHandCursor: true });
 
-            // hover / select behaviour
             container.on('pointerover', () => {
                 this.tweens.add({ targets: container, scale: 1.06, duration: 120 });
                 this.tweens.add({ targets: glow, alpha: 0.25, duration: 120 });
@@ -539,10 +579,8 @@ class CharacterSelectScene extends Phaser.Scene {
                 cardBg.setStrokeStyle(2, 0x777777);
             });
             container.on('pointerdown', () => this.select(idx, CHARACTERS));
-
             this.cards.push({ container, glow, colorFrame, cardBg, ch });
 
-            // entrance animation
             container.alpha = 0; container.y = y + 10;
             this.tweens.add({
                 targets: container,
@@ -553,11 +591,8 @@ class CharacterSelectScene extends Phaser.Scene {
             });
         });
 
-        // ================= INFO BOX =================
-        this.add.rectangle(W / 2, 460, W - 120, 90, 0x000000, 0.45)
-            .setStrokeStyle(2, 0x888888);
-
-        this.infoBox = this.add.text(W / 2, 460, CHARACTERS[0].desc || 'No description', {
+        // --- Description line (simple) ---
+        this.infoBox = this.add.text(W / 2, 465, '', {
             fontFamily: '"VT323"',
             fontSize: '16px',
             color: '#ffffff',
@@ -565,8 +600,8 @@ class CharacterSelectScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
-        // ================= START BUTTON =================
-        this.startBtn = this.add.text(W / 2, 525, '▶ Start Game', {
+        // --- Start button ---
+        this.startBtn = this.add.text(W / 2, H - 45, '▶ Start Game', {
             fontFamily: '"Pixelify Sans"',
             fontSize: '20px',
             color: '#000000',
@@ -574,70 +609,46 @@ class CharacterSelectScene extends Phaser.Scene {
             padding: { left: 14, right: 14, top: 6, bottom: 6 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        this.startBtn.on('pointerover', () =>
-            this.startBtn.setStyle({ backgroundColor: '#FFA500' }));
-        this.startBtn.on('pointerout', () =>
-            this.startBtn.setStyle({ backgroundColor: '#FFD700' }));
+        this.startBtn.on('pointerover', () => this.startBtn.setStyle({ backgroundColor: '#FFA500' }));
+        this.startBtn.on('pointerout', () => this.startBtn.setStyle({ backgroundColor: '#FFD700' }));
         this.startBtn.on('pointerdown', () => {
             const chosen = CHARACTERS[this.selected];
             this.scene.start('OverworldScene', { player: chosen });
         });
 
-        // ================= MUTE BTN =================
+        // --- Selection logic ---
+        this.select = (idx, CHARACTERS) => {
+            this.selected = idx;
+            this.cards.forEach((c, i) => {
+                const isSel = i === idx;
+                this.tweens.add({ targets: c.colorFrame, alpha: isSel ? 1 : 0, duration: 120 });
+                this.tweens.add({ targets: c.glow, alpha: isSel ? 0.35 : 0, duration: 120 });
+                c.cardBg.setStrokeStyle(isSel ? 3 : 2, isSel ? c.ch.color : 0x777777);
+            });
+            const ch = CHARACTERS[idx];
+            this.infoBox.setText(ch.desc || 'No description available');
+        };
+
+        // --- Init ---
+        this.select(0, CHARACTERS);
         this.muteBtn = new MuteButton(this);
 
-        // init selection
-        this.select(0, CHARACTERS);
-
-        // --- Input: SPACE or TAP to Start ---
         const startGame = async () => {
-            try {
-                if (this.sound.context.state === 'suspended') {
-                    await this.sound.context.resume();
-                }
-            } catch (e) {
-                console.warn("⚠️ Audio resume failed:", e);
-            }
-
+            try { if (this.sound.context.state === 'suspended') await this.sound.context.resume(); }
+            catch (e) { console.warn("⚠️ Audio resume failed:", e); }
             const chosen = CHARACTERS[this.selected];
             this.scene.start('OverworldScene', { player: chosen });
         };
 
-        // Desktop: SPACE starts
         this.input.keyboard.once('keydown-SPACE', startGame);
+        this.input.on('pointerdown', (pointer, over) => { if (over.length === 0) startGame(); });
 
-        // Mobile: tap anywhere not on a card/button also starts
-        this.input.on('pointerdown', (pointer, currentlyOver) => {
-            if (currentlyOver.length === 0) {
-                startGame();
-            }
-        });
-
-        // ✅ Optional helper text for mobile users
         if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
             this.add.text(W / 2, H - 20, '👆 Tap Start or screen to begin', {
-                fontFamily: '"VT323"',
-                fontSize: '16px',
-                color: '#fff',
-                backgroundColor: '#00000088',
-                padding: { x: 6, y: 2 }
+                fontFamily: '"VT323"', fontSize: '16px', color: '#fff',
+                backgroundColor: '#00000088', padding: { x: 6, y: 2 }
             }).setOrigin(0.5).setDepth(999);
         }
-    }
-
-
-    select(idx, CHARACTERS) {
-        this.selected = idx;
-
-        this.cards.forEach((c, i) => {
-            const isSel = i === idx;
-            this.tweens.add({ targets: c.colorFrame, alpha: isSel ? 1 : 0, duration: 120 });
-            this.tweens.add({ targets: c.glow, alpha: isSel ? 0.35 : 0, duration: 120 });
-            c.cardBg.setStrokeStyle(isSel ? 3 : 2, isSel ? c.ch.color : 0x777777);
-        });
-
-        this.children.bringToTop(this.startBtn);
-        this.infoBox.setText(CHARACTERS[idx].desc || 'No description available');
     }
 
     update() {
@@ -682,7 +693,6 @@ class OverworldScene extends Phaser.Scene {
 
         // Dialogue trees
         this.npcDialogues = this.cache.json.get('npcDialogues') || {};
-        console.log("[Overworld] npcDialogues keys:", Object.keys(this.npcDialogues));
 
         // ---- WORLD ----
         const map = this.make.tilemap({ key: 'map' });
@@ -695,11 +705,13 @@ class OverworldScene extends Phaser.Scene {
         const belowLayer = map.createLayer('Below', [tileset1, tileset2], 0, 0);
         const worldLayer = map.createLayer('World', [tileset1, tileset2], 0, 0);
         const aboveLayer = map.createLayer('Above', [tileset1, tileset2], 0, 0);
+        const superAboveLayer = map.createLayer('SuperAbove', [tileset1, tileset2], 0, 0);
 
 
         // ✅ Enable collisions for both solid layers
         worldLayer.setCollisionFromCollisionGroup(true);
         aboveLayer.setCollisionFromCollisionGroup(true);
+        superAboveLayer.setDepth(1000);
 
         // ---- CONTROLS ----
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -761,7 +773,7 @@ class OverworldScene extends Phaser.Scene {
         });
 
         // --- Spawn guests at random unused spawn points ---
-        for (let i = 1; i <= 4; i++) {
+        for (let i = 1; i <= 5; i++) {
             if (guestSpawnPoints.length === 0) break; // no more available spots
 
             // pick and remove one random spawn
@@ -781,7 +793,6 @@ class OverworldScene extends Phaser.Scene {
             this.physics.add.overlap(this.player, guest, () => this.setNearbyNPC(guest), null, this);
         }
 
-        // --- Guest movement ---
         // --- Guest movement ---
         this.time.addEvent({
             delay: 3000,
@@ -831,9 +842,15 @@ class OverworldScene extends Phaser.Scene {
             }
         });
 
+        //Depth
+        this.player.setDepth(this.player.y);
+        this.guests.children.iterate(g => g.setDepth(g.y));
+        [this.angryBridesmaid, this.priest, this.drunkUncle].forEach(npc => npc.setDepth(npc.y));
+
+
         // ---- SIGNS ----
         this.signs = map.filterObjects('Objects', obj =>
-            ['Sundial', 'Sign_Veggies', 'Sign_Danger!','caveEntrace'].includes(obj.name)
+            ['Sundial', 'Sign_Veggies', 'Sign_Danger!', 'caveEntrace'].includes(obj.name)
         );
 
         this.signGroup = this.physics.add.staticGroup();
@@ -855,6 +872,62 @@ class OverworldScene extends Phaser.Scene {
         // Overlap detection for signs
         this.physics.add.overlap(this.player, this.signGroup, (player, sign) => {
             this.setNearbySign(sign);
+        }, null, this);
+
+        // ---- HEART OBJECTS ----
+        const heartObjects = map.getObjectLayer('Objects').objects.filter(o => o.name === 'Heart');
+
+        this.hearts = this.physics.add.group({ allowGravity: false, immovable: true });
+
+        // ✅ Define animation ONCE before creating hearts
+        if (!this.anims.exists('heart_spin')) {
+            this.anims.create({
+                key: 'heart_spin',
+                frames: this.anims.generateFrameNumbers('objects_tiles', { start: 99, end: 102 }),
+                frameRate: 6,
+                repeat: -1
+            });
+        }
+
+        heartObjects.forEach(obj => {
+            const heart = this.physics.add.sprite(obj.x, obj.y, 'objects_tiles', 99)
+                .setOrigin(0.5, 1)
+                .setScale(1)
+                .setImmovable(true)
+                .play('heart_spin'); // ✅ Safe now — animation already exists
+
+            this.hearts.add(heart);
+        });
+
+        // ✅ Player overlap = heal + FX
+        this.physics.add.overlap(this.player, this.hearts, (player, heart) => {
+            player.hp = Math.min(player.hp + 25, player.maxHP || 999);
+            this.sound.play('heal', { volume: 0.5 });
+
+            this.tweens.add({
+                targets: player,
+                tint: { from: 0xffffff, to: 0x88ff88 },
+                duration: 150,
+                yoyo: true
+            });
+
+            heart.destroy();
+
+            this.hud.setText(`${this.playerData.displayName}\nHP: ${player.hp}`);
+            const msg = this.add.text(heart.x, heart.y - 20, '+25 HP', {
+                font: '12px monospace',
+                fill: '#00ff00',
+                stroke: '#000',
+                strokeThickness: 3
+            }).setDepth(9999);
+
+            this.tweens.add({
+                targets: msg,
+                y: msg.y - 20,
+                alpha: 0,
+                duration: 800,
+                onComplete: () => msg.destroy()
+            });
         }, null, this);
 
 
@@ -982,7 +1055,7 @@ class OverworldScene extends Phaser.Scene {
     readSign(sign) {
         if (!sign) return;
 
-        let message = "You read the sign...";
+        let message = "You read the sign...nothing happens";
         switch (sign.signName) {
             case "Sundial":
                 message = "“It's a few minutes to your death if you don't get those items back.”";
@@ -995,7 +1068,7 @@ class OverworldScene extends Phaser.Scene {
                 break;
             case "caveEntrace":
                 message = "Bridezilla's cave”";
-                break;    
+                break;
         }
 
         this.showAdhocBubble(this.player, message);
@@ -1071,7 +1144,33 @@ class OverworldScene extends Phaser.Scene {
         this.dialogueOpen = true;
     }
 
-    //Spawn Bridezilla
+    // === Play hurt animation for defeated NPC ===
+    playNpcHurt(npc) {
+        if (!npc || !npc.texture) return;
+
+        const baseKey = npc.texture.key.replace('_idle', '');
+        const hurtKey = baseKey + '_hurt';
+        const hurtAnim = baseKey + '_hurt_anim';
+
+        if (this.textures.exists(hurtKey) && this.anims.exists(hurtAnim)) {
+            npc.setTexture(hurtKey);
+            npc.play(hurtAnim);
+
+            npc.once('animationcomplete', () => {
+                npc.anims.stop();
+                npc.setFrame(5); // final hurt frame
+                npc.body.enable = false;
+                npc.setImmovable(true);
+                npc.setDepth(0.5); // appear slightly below player
+            });
+        } else {
+            // fallback tint effect
+            npc.setTint(0xff0000);
+            this.time.delayedCall(1000, () => npc.clearTint());
+        }
+    }
+
+    // ===== SPAWN BRIDEZILLA =====
     // ===== SPAWN BRIDEZILLA =====
     spawnBridezilla() {
         if (this.bridezillaSpawned || this.readyForFinalBattle) return;
@@ -1080,14 +1179,15 @@ class OverworldScene extends Phaser.Scene {
         const spawnX = Phaser.Math.Between(200, 600);
         const spawnY = Phaser.Math.Between(200, 400);
 
-        this.bridezilla = this.physics.add.sprite(spawnX, spawnY, 'bridezilla_idle', 4)
+        // ✅ Correct idle frame: frame 2 = "down" (idle sheet = Top, Left, Down, Right)
+        this.bridezilla = this.physics.add.sprite(spawnX, spawnY, 'bridezilla_idle', 2)
             .setScale(0.33)
             .setImmovable(false)
             .play('bridezilla_idle_down');
 
         this.bridezilla.npcName = 'Bridezilla';
 
-        // ✅ overlap → instant battle
+        // ✅ Overlap → instant battle trigger
         this.physics.add.overlap(this.player, this.bridezilla, () => {
             this.scene.launch('BattleScene', {
                 player: this.playerData,
@@ -1121,6 +1221,7 @@ class OverworldScene extends Phaser.Scene {
 
                 const speed = (distToPlayer < 250) ? 80 : 60; // ✅ faster if player close
                 let vel = { x: 0, y: 0 };
+                let animKey = 'bridezilla_idle_down'; // fallback
 
                 // Random chase chance if player nearby
                 if (distToPlayer < 300 && Phaser.Math.Between(0, 100) < 40) {
@@ -1129,16 +1230,48 @@ class OverworldScene extends Phaser.Scene {
                         this.player.x, this.player.y
                     );
                     vel = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+
+                    // Choose correct animation by angle
+                    const deg = Phaser.Math.RadToDeg(angle);
+                    if (deg > -45 && deg <= 45) animKey = 'bridezilla_walk_right';
+                    else if (deg > 45 && deg <= 135) animKey = 'bridezilla_walk_down';
+                    else if (deg <= -45 && deg > -135) animKey = 'bridezilla_walk_up';
+                    else animKey = 'bridezilla_walk_left';
                 } else {
+                    // Random wandering
                     const dir = Phaser.Math.Between(0, 3);
-                    vel = [
-                        { x: -speed, y: 0 }, { x: speed, y: 0 },
-                        { x: 0, y: -speed }, { x: 0, y: speed }
-                    ][dir];
+                    const dirs = [
+                        { x: -speed, y: 0, anim: 'bridezilla_walk_left' },
+                        { x: speed, y: 0, anim: 'bridezilla_walk_right' },
+                        { x: 0, y: -speed, anim: 'bridezilla_walk_up' },
+                        { x: 0, y: speed, anim: 'bridezilla_walk_down' }
+                    ];
+                    vel = { x: dirs[dir].x, y: dirs[dir].y };
+                    animKey = dirs[dir].anim;
+                }
+
+                // ✅ Play matching walk animation
+                if (this.anims.exists(animKey)) {
+                    this.bridezilla.play(animKey, true);
                 }
 
                 this.bridezilla.setVelocity(vel.x, vel.y);
-                this.time.delayedCall(1000, () => this.bridezilla.setVelocity(0, 0));
+
+                // Stop after 1s, revert to idle
+                this.time.delayedCall(1000, () => {
+                    this.bridezilla.setVelocity(0, 0);
+
+                    // Pick correct idle frame based on last animation
+                    let idleKey = 'bridezilla_idle_down';
+                    if (animKey.includes('left')) idleKey = 'bridezilla_idle_left';
+                    else if (animKey.includes('right')) idleKey = 'bridezilla_idle_right';
+                    else if (animKey.includes('up')) idleKey = 'bridezilla_idle_up';
+                    else idleKey = 'bridezilla_idle_down';
+
+                    if (this.anims.exists(idleKey)) {
+                        this.bridezilla.play(idleKey);
+                    }
+                });
 
                 // Occasionally yell an angry line
                 if (Phaser.Math.Between(0, 100) < 25) {
@@ -1148,8 +1281,10 @@ class OverworldScene extends Phaser.Scene {
             }
         });
 
+        // Intro line
         this.showAdhocBubble(this.player, "Bridezilla has awoken! Run for your life!");
     }
+
 
     showDialogueNode(node) {
         this.promptLabel.setVisible(false);
@@ -1161,36 +1296,44 @@ class OverworldScene extends Phaser.Scene {
         let sx = npc.x - cam.scrollX;
         const sy = npc.y - cam.scrollY;
 
-        const bubbleWidth = isMobile ? 280 : 240;
+        const baseWidth = isMobile ? 320 : 280;
         const textSize = isMobile ? '16px monospace' : '14px monospace';
+        const padding = 26;
+        const choiceSpacing = 36; // increased spacing between dialogue choices
 
         this.dialogText.setText(`${npc.npcName}: ${node.text}`)
-            .setWordWrapWidth(bubbleWidth - 20)
-            .setVisible(true).setStyle({ font: textSize });
+            .setStyle({ font: textSize })
+            .setWordWrapWidth(baseWidth - padding * 2)
+            .setVisible(true);
 
         const textHeight = this.dialogText.height || 40;
-        const bubbleHeight = textHeight + node.choices.length * 26 + 44; // extra padding
+        const bubbleHeight = textHeight + node.choices.length * choiceSpacing + padding * 2;
+        const bubbleWidth = baseWidth;
 
         let bubbleY = sy - npc.displayHeight * 1.4;
         if (bubbleY - bubbleHeight / 2 < 0) bubbleY = sy + npc.displayHeight * 1.4;
 
         sx = Phaser.Math.Clamp(sx, bubbleWidth / 2 + 8, GAME_WIDTH - bubbleWidth / 2 - 8);
 
-        this.dialogBox.setPosition(sx, bubbleY).setSize(bubbleWidth, bubbleHeight).setVisible(true);
-        this.dialogText.setPosition(sx, bubbleY - bubbleHeight / 2 + 14);
+        this.dialogBox.setPosition(sx, bubbleY)
+            .setSize(bubbleWidth, bubbleHeight)
+            .setVisible(true);
+
+        this.dialogText.setPosition(sx, bubbleY - bubbleHeight / 2 + padding / 2);
         this.uiCam.dirty = true;
         this.hud.setVisible(false);
         this.dialogueOpen = true;
 
-        const startY = bubbleY - bubbleHeight / 2 + textHeight + 32; // more gap
+        // --- Add choice buttons ---
+        const startY = bubbleY - bubbleHeight / 2 + textHeight + padding;
         node.choices.forEach((choice, idx) => {
-            const btnY = startY + idx * 26;
+            const btnY = startY + idx * choiceSpacing;
             const btn = this.add.text(sx, btnY, choice.text, {
-                font: '12px monospace',
+                font: '13px monospace',
                 backgroundColor: '#333',
-                padding: { x: 4, y: 2 },
+                padding: { x: 8, y: 4 },
                 color: '#fff',
-                wordWrap: { width: bubbleWidth - 30, useAdvancedWrap: true }, // ✅ wrap long lines
+                wordWrap: { width: bubbleWidth - 40, useAdvancedWrap: true },
                 align: 'center'
             }).setOrigin(0.5, 0).setInteractive();
 
@@ -1201,37 +1344,142 @@ class OverworldScene extends Phaser.Scene {
     }
 
     chooseDialogueOption(choice) {
+        // 🧱 Disable all interactions immediately to prevent double-clicks
+        if (this.choiceButtons) {
+            this.choiceButtons.forEach(btn => {
+                btn.disableInteractive();
+                btn.setAlpha(0.5); // slight visual feedback
+            });
+        }
+
+        // 🧱 Prevent re-trigger during transition
+        this.input.enabled = false;
+
+        // --- 🩸 Battle trigger branch ---
         if (choice.next === "battle" || choice.battle) {
             this.dialogueNpc.spent = true;
-            this.closeDialogue(true);
-            const foeId = this.dialogueNpc.npcName.replace(/\s+/g, "_").toLowerCase();
-            const foeData = this.game.characters.find(c => c.id === foeId);
-            if (!foeData) return;
-            this.scene.launch('BattleScene', { player: this.playerData, foe: foeData, npc: this.dialogueNpc });
-            this.scene.pause();
+
+            if (this.choiceButtons) {
+                this.choiceButtons.forEach(b => b.destroy());
+                this.choiceButtons = [];
+            }
+
+            // ✅ Stage 1: show JSON dialogue text before battle
+            const battleNode = this.dialogueTree.find(n => n.id === "battle");
+            const battleText = battleNode ? battleNode.text : (this.dialogueNode.text || "How dare you!");
+            this.dialogText.setText(`${this.dialogueNpc.npcName}: ${battleText}`);
+            this.uiCam.dirty = true;
+
+            // ✅ Stage 2: short delay, then swirl and start battle
+            this.time.delayedCall(1500, () => {
+                // Close dialogue box before pausing the scene
+                this.closeDialogue(true);     // force = true → clean reset
+                this.input.enabled = true;    // re-enable input
+
+                this.triggerSwirlTransition(() => {
+                    const foeId = this.dialogueNpc.npcName.replace(/\s+/g, "_").toLowerCase();
+                    const foeData = this.game.characters.find(c => c.id === foeId);
+                    if (foeData) {
+                        // Launch battle as separate scene, keep overworld running
+                        this.scene.launch('BattleScene', {
+                            player: this.playerData,
+                            foe: foeData,
+                            npc: this.dialogueNpc
+                        });
+
+                        // 🔧 Instead of pausing, temporarily disable player controls
+                        this.dialogueOpen = false;
+                        this.player.setVelocity(0, 0);
+                        this.input.keyboard.enabled = false;
+                        this.scene.bringToTop('BattleScene');
+
+                        // ✅ When BattleScene ends, restore input
+                        const battleScene = this.scene.get('BattleScene');
+                        battleScene.events.once('shutdown', () => {
+                            if (this.input.keyboard) this.input.keyboard.enabled = true;
+                            this.input.enabled = true;
+                        });
+                    }
+                });
+            });
+
             return;
         }
 
+        // --- 🎁 Reward branch ---
         if (choice.reward) {
-            this.inventory.push(choice.reward);
-            this.updateInventoryHud();
-            this.dialogText.setText(`${this.dialogueNpc.npcName}: You got ${choice.reward}!`);
             this.dialogueNpc.spent = true;
-            this.time.delayedCall(1200, () => this.closeDialogue(), [], this);
+
+            if (this.choiceButtons) this.choiceButtons.forEach(b => b.destroy());
+            this.choiceButtons = [];
+
+            // ✅ Stage 1: Show the preceding JSON dialogue text first
+            const endNode = this.dialogueTree.find(n => n.id === "end");
+            const rewardText = endNode ? endNode.text : (this.dialogueNode.text || "...");
+            this.dialogText.setText(`${this.dialogueNpc.npcName}: ${rewardText}`);
+            this.uiCam.dirty = true;
+
+            // ✅ Stage 2: After 1.5s, show reward text
+            this.time.delayedCall(1500, () => {
+                this.inventory.push(choice.reward);
+                this.updateInventoryHud();
+                this.dialogText.setText(`${this.dialogueNpc.npcName}: You got ${choice.reward}!`);
+                this.uiCam.dirty = true;
+            });
+
+            // ✅ Stage 3: Close dialogue after short delay
+            this.time.delayedCall(3200, () => {
+                this.input.enabled = true;
+                this.closeDialogue();
+            });
             return;
         }
 
+        // --- 🚪 End of conversation ---
         if (choice.next === "end" || !choice.next) {
             this.dialogueNpc.spent = true;
-            this.closeDialogue();
+            this.time.delayedCall(500, () => {
+                this.input.enabled = true;
+                this.closeDialogue();
+            });
             return;
         }
 
+        // --- 🔁 Move to next node ---
         const nextNode = this.dialogueTree.find(n => n.id === choice.next);
         if (nextNode) {
-            this.dialogueNode = nextNode;
-            this.showDialogueNode(nextNode);
+            this.time.delayedCall(200, () => {
+                this.input.enabled = true;
+                this.dialogueNode = nextNode;
+                this.showDialogueNode(nextNode);
+            });
         }
+    }
+
+
+    triggerSwirlTransition(onComplete) {
+        const swirl = this.add.graphics({ x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 });
+        swirl.setDepth(40000);
+        swirl.fillStyle(0x000000, 1);
+
+        let angle = 0;
+        let radius = 0;
+
+        const swirlStep = () => {
+            swirl.clear();
+            swirl.fillStyle(0x000000, 1);
+            swirl.slice(0, 0, radius, angle, angle + Phaser.Math.DegToRad(120), false);
+            swirl.fillPath();
+            radius += 40;
+            angle += Phaser.Math.DegToRad(30);
+            if (radius < GAME_WIDTH * 1.2) {
+                this.time.delayedCall(16, swirlStep);
+            } else {
+                swirl.destroy();
+                if (onComplete) onComplete();
+            }
+        };
+        swirlStep();
     }
 
     closeDialogue(force = false) {
@@ -1384,18 +1632,44 @@ class OverworldScene extends Phaser.Scene {
             if (this.timerLabel) this.timerLabel.setVisible(false);
             if (this.bridezillaTimer) this.bridezillaTimer.remove(false);
             this.remainingTime = 0;
-
-            this.showAdhocBubble(this.player,
-                "You sense Bridezilla awaits in her cave...\nFind her and return the lost items to end this madness!");
             this.readyForFinalBattle = true;
-        }
 
+            // Big splash overlay
+            const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2,
+                "Bring all items back to Bridezilla in her cave!",
+                {
+                    font: '20px monospace',
+                    fill: '#fff',
+                    backgroundColor: '#000a',
+                    padding: { x: 12, y: 8 },
+                    align: 'center',
+                }
+            ).setOrigin(0.5).setScrollFactor(0).setDepth(20000).setAlpha(0);
+
+            this.uiRoot.add(msg);
+
+            this.tweens.add({
+                targets: msg,
+                alpha: 1,
+                duration: 400,
+                yoyo: true,
+                hold: 2500,
+                onComplete: () => msg.destroy()
+            });
+
+            this.showAdhocBubble(this.player, "You sense Bridezilla awaits...");
+        }
     }
 
     // ===== UPDATE LOOP =====
     update() {
         const speed = BASE_SPEED;
         let moveX = 0, moveY = 0;
+
+        // Maintain proper depth sorting so lower (visually closer) characters draw on top
+        this.player.setDepth(this.player.y);
+        this.guests.getChildren().forEach(g => g.setDepth(g.y));
+
 
         // --- Ensure prompt is hidden when dialogue is open ---
         if (this.dialogueOpen) {
@@ -1446,6 +1720,12 @@ class OverworldScene extends Phaser.Scene {
             if (d > 64) this.clearNearbyNPC();
         }
 
+        if (this.currentlyNearSign) {
+            const d = Phaser.Math.Distance.Between(this.player.x, this.player.y,
+                this.currentlyNearSign.x, this.currentlyNearSign.y);
+            if (d > 72) this.clearNearbySign();
+        }
+
         if (this.timerLabel && !this.bridezillaSpawned && this.remainingTime > 0) {
             this.remainingTime -= this.game.loop.delta;
             const minutes = Math.floor(this.remainingTime / 60000);
@@ -1468,6 +1748,7 @@ class OverworldScene extends Phaser.Scene {
     }
 }
 
+// --- BattleScene.js ---
 class BattleScene extends Phaser.Scene {
     constructor() { super('BattleScene'); }
 
@@ -1475,9 +1756,8 @@ class BattleScene extends Phaser.Scene {
         this.playerData = JSON.parse(JSON.stringify(data.player));
         this.foeData = JSON.parse(JSON.stringify(data.foe));
         this.npcRef = data.npc || null;
-
-        // ✅ ensure we keep CURRENT HP passed from overworld
-        this.initialPlayerHP = data.player.hp;
+        this.initialPlayerHP = Math.ceil(data.player.hp);
+        this.maxPlayerHP = Math.ceil(data.player.maxHP || this.playerData.hp);
     }
 
     create() {
@@ -1489,19 +1769,21 @@ class BattleScene extends Phaser.Scene {
             .setOrigin(0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(DEPTH_BG);
 
         // --- Platforms ---
-        this.add.ellipse(620, 240, 120, 40, 0xd0d0d0).setStrokeStyle(1, 0x999999).setDepth(DEPTH_PLATFORM);
-        this.add.ellipse(200, 420, 120, 40, 0xd0d0d0).setStrokeStyle(1, 0x999999).setDepth(DEPTH_PLATFORM);
+        this.add.ellipse(620, 260, 120, 40, 0xd0d0d0).setStrokeStyle(1, 0x999999).setDepth(DEPTH_PLATFORM);
+        this.add.ellipse(200, 380, 120, 40, 0xd0d0d0).setStrokeStyle(1, 0x999999).setDepth(DEPTH_PLATFORM);
 
         // --- Sprites ---
         this.playerSprite = this.add.image(200, 360, 'battle_back_' + this.playerData.id)
-            .setDisplaySize(64, 64).setDepth(DEPTH_SPRITES);
+            .setDisplaySize(64, 64)
+            .setDepth(DEPTH_SPRITES);
         this.foeSprite = this.add.image(620, 200, 'battle_front_' + this.foeData.id)
-            .setDisplaySize(64, 64).setDepth(DEPTH_SPRITES);
+            .setDisplaySize(128, 128)
+            .setDepth(DEPTH_SPRITES);
 
-        // --- Setup stats ---
+        // --- Stats ---
         this.playerState = {
-            maxHP: this.playerData.maxHP || this.playerData.hp,
-            hp: this.initialPlayerHP,   // ✅ persists current HP
+            maxHP: this.maxPlayerHP,
+            hp: this.initialPlayerHP,
             atkMod: 1, defMod: 1, status: {}
         };
         this.foeState = {
@@ -1537,15 +1819,79 @@ class BattleScene extends Phaser.Scene {
             return { fill, barW };
         };
 
-        // ===== INFO BOXES =====
+        // ===== Info Boxes =====
         this.foeUI = makePanel(420, 40, 320, 60);
         this.foeText = addLabel(this.foeUI, `${this.foeData.displayName} Lv.5`, 10, 10, 300);
         this.foeHPFill = addHP(this.foeUI, 320, 60).fill;
+
 
         this.playerUI = makePanel(40, 270, 320, 60);
         this.playerText = addLabel(this.playerUI, `${this.playerData.displayName} Lv.5`, 10, 10, 300);
         this.playerHPFill = addHP(this.playerUI, 320, 60).fill;
 
+        // Immediately reflect actual HP ratio on bar creation
+        const pRatio = this.playerState.hp / this.playerState.maxHP;
+        const fRatio = this.foeState.hp / this.foeState.maxHP;
+        this.playerHPFill.scaleX = Phaser.Math.Clamp(pRatio, 0, 1);
+        this.playerHPFill.width *= this.playerHPFill.scaleX;
+        this.foeHPFill.scaleX = Phaser.Math.Clamp(fRatio, 0, 1);
+        this.foeHPFill.width *= this.foeHPFill.scaleX;
+
+        // === Info Button (properly locked and layered) ===
+        const nameWidth = this.playerText.width;
+        const infoX = this.playerText.x + nameWidth + 8;
+        const infoY = this.playerText.y + 2;
+
+        this.infoOverlayOpen = false;
+
+        // Create the button *before* other UI panels finalize
+        this.playerInfoBtn = this.add.text(infoX, infoY, 'ⓘ', {
+            fontFamily: '"VT323"',
+            fontSize: '18px',
+            color: '#ffffff',
+            backgroundColor: '#000000',
+            padding: { x: 4, y: 1 }
+        })
+            .setOrigin(0, 0)
+            .setAlpha(0.9)
+            .setInteractive({ useHandCursor: true });
+
+        // Attach it inside the same container
+        this.playerUI.add(this.playerInfoBtn);
+
+        // Match container depth
+        this.playerInfoBtn.setDepth(DEPTH_UI + 1);
+
+        // Soft pulsing animation to hint interactivity
+        this.tweens.add({
+            targets: this.playerInfoBtn,
+            alpha: { from: 0.6, to: 1 },
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Hover/tap feedback
+        this.playerInfoBtn.on('pointerover', () => {
+            this.tweens.add({
+                targets: this.playerInfoBtn,
+                scale: 1.1,
+                duration: 120,
+                ease: 'Back.easeOut'
+            });
+        });
+        this.playerInfoBtn.on('pointerout', () => {
+            this.tweens.add({
+                targets: this.playerInfoBtn,
+                scale: 1.0,
+                duration: 120,
+                ease: 'Back.easeIn'
+            });
+        });
+
+        // Toggle overlay on click/tap
+        this.playerInfoBtn.on('pointerdown', () => this.toggleAbilityOverlay());
         // ===== Dialogue + Menu =====
         this.dialogUI = makePanel(20, 400, 760, 90);
         this.log = addLabel(this.dialogUI, 'What will you do?', 12, 12, 740);
@@ -1558,7 +1904,7 @@ class BattleScene extends Phaser.Scene {
             const x = pad + col * (colW + gutter), y = pad + row * rowH;
             const btnC = this.add.container(x, y);
             const bg = this.add.rectangle(0, 0, colW, 26, 0xeeeeee).setOrigin(0).setStrokeStyle(1, 0xbbbbbb);
-            const t = this.add.text(8, 5, m.name.toUpperCase(), { font: '14px monospace', fill: '#000', wordWrap: { width: colW - 16 } }).setOrigin(0, 0);
+            const t = this.add.text(8, 5, m.name.toUpperCase(), { font: '14px monospace', fill: '#000' }).setOrigin(0, 0);
             btnC.add([bg, t]);
             btnC.setSize(colW, 26).setInteractive(new Phaser.Geom.Rectangle(0, 0, colW, 26), Phaser.Geom.Rectangle.Contains);
             btnC.on('pointerover', () => bg.setFillStyle(0xdddddd));
@@ -1570,33 +1916,134 @@ class BattleScene extends Phaser.Scene {
 
         this.currentTurn = 'player';
         this.updateHPBars();
+
+        // === Overlay & info button ===
+        this.createAbilityOverlay();
+    }
+
+    createAbilityOverlay() {
+        const W = GAME_WIDTH, H = GAME_HEIGHT;
+        const ch = this.playerData;
+
+        // === Centered modal overlay ===
+        const boxW = 420, boxH = 280;
+        this.abilityOverlay = this.add.container(W / 2, H / 2)
+            .setDepth(9999)
+            .setVisible(false)
+            .setScrollFactor(0)
+            .setAlpha(0);
+
+        // Dim background
+        const dim = this.add.rectangle(0, 0, W, H, 0x000000, 0.6)
+            .setOrigin(0.5)
+            .setInteractive(); // to detect clicks for closing
+        this.abilityOverlay.add(dim);
+
+        // Box
+        const bg = this.add.rectangle(0, 0, boxW, boxH, 0x111111, 0.9)
+            .setStrokeStyle(3, 0xFFD700, 1)
+            .setOrigin(0.5);
+        this.abilityOverlay.add(bg);
+
+        // Text title
+        const title = this.add.text(0, -boxH / 2 + 16, ch.displayName, {
+            fontFamily: '"Pixelify Sans"',
+            fontSize: '20px',
+            color: '#FFD700',
+            align: 'center'
+        }).setOrigin(0.5, 0);
+
+        this.abilityOverlay.add(title);
+
+        // Moves
+        let yOff = -boxH / 2 + 50;
+        ch.moves.forEach((m) => {
+            const typeColor = (window.TYPE_COLORS && window.TYPE_COLORS[m.type]) || '#ffffff';
+            const moveLine = this.add.text(-boxW / 2 + 30, yOff, `${m.name} [${m.type}]`, {
+                fontFamily: '"VT323"', fontSize: '15px', color: typeColor
+            }).setOrigin(0, 0);
+            const desc = this.add.text(-boxW / 2 + 40, yOff + 16, m.desc, {
+                fontFamily: '"VT323"', fontSize: '13px', color: '#cccccc',
+                wordWrap: { width: boxW - 60, useAdvancedWrap: true },
+                align: 'justify'
+            }).setOrigin(0, 0);
+            this.abilityOverlay.add([moveLine, desc]);
+            yOff += 44;
+        });
+
+        // Random synergy tip
+        if (ch.synergies?.length) {
+            const tip = Phaser.Utils.Array.GetRandom(ch.synergies);
+            const syText = this.add.text(0, boxH / 2 - 40, `💡 ${tip}`, {
+                fontFamily: '"VT323"',
+                fontSize: '14px',
+                color: '#00FFAA',
+                wordWrap: { width: boxW - 40, useAdvancedWrap: true },
+                align: 'center'
+            }).setOrigin(0.5, 0);
+            this.abilityOverlay.add(syText);
+        }
+
+        // Click anywhere or press I to close
+        dim.on('pointerdown', (pointer, localX, localY, event) => {
+            event.stopPropagation();
+            this.toggleAbilityOverlay();
+        });
+        this.input.keyboard.on('keydown-I', () => this.toggleAbilityOverlay());
+    }
+
+    toggleAbilityOverlay() {
+        const wasVisible = this.infoOverlayOpen;
+        this.infoOverlayOpen = !wasVisible;
+
+        if (!wasVisible) {
+            this.abilityOverlay.setVisible(true);
+            this.tweens.add({
+                targets: this.abilityOverlay,
+                alpha: { from: 0, to: 1 },
+                scale: { from: 0.95, to: 1 },
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+        } else {
+            this.tweens.add({
+                targets: this.abilityOverlay,
+                alpha: { from: 1, to: 0 },
+                scale: { from: 1, to: 0.95 },
+                duration: 180,
+                ease: 'Sine.easeIn',
+                onComplete: () => this.abilityOverlay.setVisible(false)
+            });
+        }
     }
 
     // ====== HELPERS ======
     rollAccuracy(move) { return Phaser.Math.Between(1, 100) <= (move.accuracy || 100); }
-    // ===== VISUAL FEEDBACK =====
+
     playAttackAnimation(attacker, defender, moveName) {
         const cam = this.cameras.main;
+        const moveType = moveName.toLowerCase();
 
-        // 🔊 Sound FX (optional — replace with your actual sound keys)
-        if (this.sound.get('attack_sfx')) this.sound.play('attack_sfx', { volume: 0.4 });
-        else this.sound.play('slash_sfx', { volume: 0.4, detune: Phaser.Math.Between(-100, 100) });
+        // --- Randomized SFX variety ---
+        if (moveType.includes('heal')) this.sound.play('heal', { volume: 0.5 });
+        else if (moveType.includes('smite') || moveType.includes('bash') || moveType.includes('slam')) this.sound.play('hit', { volume: 0.45 });
+        else this.sound.play('slash', { volume: 0.45, detune: Phaser.Math.Between(-50, 50) });
 
-        // 💥 Screen shake when physical attacks land
-        cam.shake(120, 0.0035);
+        cam.shake(140, 0.004);
 
-        // 💨 Simple lunge effect
+        // --- Lunge forward motion ---
         this.tweens.add({
             targets: attacker,
-            x: attacker.x + (attacker === this.playerSprite ? 30 : -30),
-            duration: 80,
+            x: attacker.x + (attacker === this.playerSprite ? Phaser.Math.Between(25, 35) : Phaser.Math.Between(-25, -35)),
+            y: attacker.y - 8,
+            duration: 100,
             yoyo: true,
-            ease: 'Quad.easeOut'
+            ease: 'Back.easeOut'
         });
 
-        // 💢 Red flash on defender
+        // --- Defender flash tint ---
         this.tweens.addCounter({
-            from: 255, to: 0, duration: 160,
+            from: 255, to: 0, duration: 180,
             onUpdate: tween => {
                 const val = Math.floor(tween.getValue());
                 defender.setTintFill(Phaser.Display.Color.GetColor(255, val, val));
@@ -1604,31 +2051,68 @@ class BattleScene extends Phaser.Scene {
             onComplete: () => defender.clearTint()
         });
 
-        // ✂️ Slash overlay
-        const slash = this.add.image(defender.x, defender.y - 10, 'fx_slash')
-            .setScale(0.6).setAlpha(0).setDepth(999);
-        this.tweens.add({
-            targets: slash,
-            alpha: { from: 0, to: 1 },
-            scale: { from: 0.3, to: 0.8 },
-            angle: { from: -25, to: 10 },
-            duration: 150,
-            yoyo: true,
-            onComplete: () => slash.destroy()
-        });
+        // --- Attack visual varies by move type ---
+        if (moveType.includes('slash') || moveType.includes('cut') || moveType.includes('strike')) {
+            // Slash effect
+            const slash = this.add.image(defender.x, defender.y - Phaser.Math.Between(6, 14), 'fx_slash')
+                .setScale(Phaser.Math.FloatBetween(0.45, 0.7))
+                .setAlpha(0).setDepth(999)
+                .setAngle(Phaser.Math.Between(-35, 25))
+                .setTint(0xffffff);
+            this.tweens.add({
+                targets: slash,
+                alpha: { from: 0, to: 1 },
+                scale: { from: 0.3, to: 0.9 },
+                angle: `+=${Phaser.Math.Between(-15, 15)}`,
+                duration: 180,
+                yoyo: true,
+                ease: 'Cubic.easeOut',
+                onComplete: () => slash.destroy()
+            });
+        } else if (moveType.includes('punch') || moveType.includes('bash') || moveType.includes('slam') || moveType.includes('smite')) {
+            // Punch impact flash
+            const impact = this.add.circle(defender.x, defender.y, 10, 0xffffff, 0.9)
+                .setDepth(999)
+                .setAlpha(0.7);
+            this.tweens.add({
+                targets: impact,
+                scale: { from: 0.3, to: 2 },
+                alpha: { from: 0.7, to: 0 },
+                duration: 220,
+                ease: 'Cubic.easeOut',
+                onComplete: () => impact.destroy()
+            });
+        } else {
+            // Default generic flash
+            const flash = this.add.rectangle(defender.x, defender.y, 20, 20, 0xffffff, 0.7)
+                .setDepth(999)
+                .setAlpha(0.7);
+            this.tweens.add({
+                targets: flash,
+                alpha: { from: 0.7, to: 0 },
+                scaleX: { from: 0.5, to: 2 },
+                scaleY: { from: 0.5, to: 2 },
+                duration: 200,
+                ease: 'Sine.easeOut',
+                onComplete: () => flash.destroy()
+            });
+        }
     }
+
     applyDamage(attacker, defender, move) {
         let dmg = (move.power || 0) * (attacker.atkMod || 1) * (1 / (defender.defMod || 1));
+        dmg = Math.ceil(dmg); // always round up
         defender.hp = Math.max(0, defender.hp - dmg);
-        return Math.round(dmg);
+        return dmg;
     }
 
     // ===== EFFECTS =====
     applyEffect(target, effect, sourceName, targetName) {
         if (!effect) return;
         if (effect.heal) {
-            target.hp = Math.min(target.maxHP, target.hp + effect.heal);
-            this.log.setText(`${sourceName} healed ${effect.heal} HP!`);
+            const heal = Math.ceil(effect.heal);
+            target.hp = Math.min(target.maxHP, target.hp + heal);
+            this.log.setText(`${sourceName} healed ${heal} HP!`);
         }
         if (effect.chanceConfuse && Phaser.Math.Between(1, 100) <= effect.chanceConfuse) {
             target.status.confuse = effect.durationTurns || 2;
@@ -1673,15 +2157,72 @@ class BattleScene extends Phaser.Scene {
     }
 
     tickStatuses(target, targetName) {
-        if (target.status.bleed) {
-            const bleedDmg = Math.round(target.maxHP * 0.05);
+        // Ensure status object exists
+        const s = target.status || (target.status = {});
+        const msgs = [];
+
+        // --- Damage over time (Bleed) ---
+        if (s.bleed && s.bleed > 0) {
+            const bleedDmg = Math.max(1, Math.ceil(target.maxHP * 0.05));
             target.hp = Math.max(0, target.hp - bleedDmg);
-            this.log.setText(`${targetName} suffers ${bleedDmg} bleeding damage! (${target.status.bleed} turns left)`);
-            target.status.bleed--;
+            s.bleed = Math.max(0, s.bleed - 1);
+            msgs.push(`${targetName} suffers ${bleedDmg} bleeding damage! (${s.bleed} turn${s.bleed === 1 ? '' : 's'} left)`);
         }
-        ["sleep", "stun", "skip", "confuse", "atkBoost", "defBoost", "atkDebuff", "defDebuff"].forEach(s => {
-            if (target.status[s]) target.status[s]--;
+
+        // --- Sleep / Stun / Flinch (Skip) tick down by 1 if > 0 ---
+        ['sleep', 'stun', 'skip'].forEach(k => {
+            if (s[k] && s[k] > 0) s[k] = Math.max(0, s[k] - 1);
         });
+
+        // --- Confusion: 50% chance to recover, else -1 turn (only once) ---
+        if (s.confuse && s.confuse > 0) {
+            if (Phaser.Math.Between(1, 100) <= 50) {
+                s.confuse = 0;
+                msgs.push(`${targetName} snapped out of confusion!`);
+            } else {
+                s.confuse = Math.max(0, s.confuse - 1);
+            }
+        }
+
+        // --- Buffs / Debuffs expire cleanly (reset multipliers) ---
+        if (s.atkBoost && s.atkBoost > 0) {
+            s.atkBoost -= 1;
+            if (s.atkBoost === 0) { target.atkMod = 1; msgs.push(`${targetName}'s attack returned to normal.`); }
+        }
+        if (s.defBoost && s.defBoost > 0) {
+            s.defBoost -= 1;
+            if (s.defBoost === 0) { target.defMod = 1; msgs.push(`${targetName}'s defense returned to normal.`); }
+        }
+        if (s.atkDebuff && s.atkDebuff > 0) {
+            s.atkDebuff -= 1;
+            if (s.atkDebuff === 0) { target.atkMod = 1; msgs.push(`${targetName}'s attack recovered.`); }
+        }
+        if (s.defDebuff && s.defDebuff > 0) {
+            s.defDebuff -= 1;
+            if (s.defDebuff === 0) { target.defMod = 1; msgs.push(`${targetName}'s defense recovered.`); }
+        }
+
+        // Clamp HP for safety
+        target.hp = Math.max(0, Math.min(target.hp, target.maxHP));
+
+        if (msgs.length) this.log.setText(msgs.join('\n'));
+
+        // Return a flag so caller can resolve KO caused by status (e.g., bleed)
+        return target.hp <= 0;
+    }
+
+    maybeConfuseSelf(targetState, targetData) {
+        if (targetState.status.confuse && targetState.status.confuse > 0) {
+            // 30% chance to hurt self
+            if (Phaser.Math.Between(1, 100) <= 30) {
+                const selfDmg = Math.ceil(targetState.maxHP * 0.1);
+                targetState.hp = Math.max(0, targetState.hp - selfDmg);
+                this.log.setText(`${targetData.displayName} hurt themselves in confusion! (-${selfDmg})`);
+                this.updateHPBars();
+                return true; // did self-damage, skip attack
+            }
+        }
+        return false;
     }
 
     // ===== TURN HANDLERS =====
@@ -1692,6 +2233,8 @@ class BattleScene extends Phaser.Scene {
         if (this.playerState.status.sleep > 0) { this.log.setText(`${this.playerData.displayName} is asleep!`); return this.endTurn('foe'); }
         if (this.playerState.status.stun > 0) { this.log.setText(`${this.playerData.displayName} is stunned!`); return this.endTurn('foe'); }
         if (this.playerState.status.skip > 0) { this.log.setText(`${this.playerData.displayName} flinched!`); return this.endTurn('foe'); }
+        if (this.maybeConfuseSelf(this.playerState, this.playerData))
+            return this.endTurn('foe');
 
         if (!this.rollAccuracy(move)) this.log.setText(`${this.playerData.displayName}'s ${move.name} missed!`);
         else {
@@ -1712,6 +2255,9 @@ class BattleScene extends Phaser.Scene {
         if (this.foeState.status.sleep > 0) { this.log.setText(`${this.foeData.displayName} is asleep!`); return this.endTurn('player'); }
         if (this.foeState.status.stun > 0) { this.log.setText(`${this.foeData.displayName} is stunned!`); return this.endTurn('player'); }
         if (this.foeState.status.skip > 0) { this.log.setText(`${this.foeData.displayName} flinched!`); return this.endTurn('player'); }
+        if (this.maybeConfuseSelf(this.foeState, this.foeData))
+            return this.endTurn('player');
+
 
         if (!this.rollAccuracy(move)) this.log.setText(`${this.foeData.displayName}'s ${move.name} missed!`);
         else {
@@ -1733,7 +2279,6 @@ class BattleScene extends Phaser.Scene {
     }
 
     // ===== WIN / LOSE =====
-    // ===== WIN / LOSE =====
     win() {
         this.log.setText(`${this.playerData.displayName} is victorious!`);
 
@@ -1745,6 +2290,13 @@ class BattleScene extends Phaser.Scene {
             if (this.npcRef && this.foeData.id !== 'bridezilla') {
                 this.npcRef.spent = true;
 
+                // ✅ Tell OverworldScene to play hurt animation for this NPC
+                const overworld = this.scene.get('OverworldScene');
+                if (overworld && overworld.playNpcHurt) {
+                    overworld.playNpcHurt(this.npcRef);
+                }
+
+                // 🎁 Handle reward logic as before
                 const npcDialogues = overworld?.npcDialogues?.[this.npcRef.npcName];
                 if (npcDialogues) {
                     for (let node of npcDialogues) {
@@ -1834,11 +2386,21 @@ class BattleScene extends Phaser.Scene {
     }
 
     updateHPBars() {
-        const pRatio = this.playerState.hp / this.playerState.maxHP;
-        const fRatio = this.foeState.hp / this.foeState.maxHP;
+        const pRatio = Phaser.Math.Clamp(this.playerState.hp / this.playerState.maxHP, 0, 1);
+        const fRatio = Phaser.Math.Clamp(this.foeState.hp / this.foeState.maxHP, 0, 1);
 
-        this.playerHPFill.scaleX = Phaser.Math.Clamp(pRatio, 0, 1);
-        this.foeHPFill.scaleX = Phaser.Math.Clamp(fRatio, 0, 1);
+        this.tweens.add({
+            targets: this.playerHPFill,
+            scaleX: pRatio,
+            duration: 300,
+            ease: 'Sine.easeOut'
+        });
+        this.tweens.add({
+            targets: this.foeHPFill,
+            scaleX: fRatio,
+            duration: 300,
+            ease: 'Sine.easeOut'
+        });
 
         this.playerHPFill.fillColor =
             (pRatio > 0.6) ? 0x44cc44 : (pRatio > 0.3 ? 0xffcc00 : 0xff4444);
